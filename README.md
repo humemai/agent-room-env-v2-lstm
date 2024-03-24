@@ -1,27 +1,41 @@
-# explicit-memory
+# Agent for RoomEnv-v2
 
-[![DOI](https://zenodo.org/badge/411241603.svg)](https://zenodo.org/badge/latestdoi/411241603)
+[![DOI](https://img.shields.io/badge/Paper-PDF-red.svg)]()
 
-This repo hosts several (RL) agents that learn their policies by interacting with the
-[gymnasium](https://gymnasium.farama.org/) environments.
+This repo is to train an agent that interacts with the [RoomEnv-v2](https://github.com/tae898/room-env).
 
-These agents all take advantage of have human-like external memory systems that are modeled with knowledge graphs.
+## Prerequisites
 
-## [Click here for the agent for RoomEnv-v0](./AgentRoomEnv0/README.md)
+1. A unix or unix-like x86 machine
+1. python 3.10 or higher.
+1. Running in a virtual environment (e.g., conda, virtualenv, etc.) is highly recommended so that you don't mess up with the system python.
+1. Make sure you are in the same directory where this README is located, i.e., `AgentRoomEnv2`
+1. Install the `explicit_memory` python package, by running `pip install ..`
+   1. This will install the gymnasium environment [RoomEnv2](https://github.com/tae898/room-env)
+1. `pip install -r requirements.txt`
 
-This agent was featured in the paper ["A Machine With Human-Like Memory Systems"](https://arxiv.org/abs/2204.01611).
+## Run training
 
-## [Click here for the agent for RoomEnv-v1](./AgentRoomEnv1/README.md)
+```sh
+python train.py
+```
 
-This agent was featured in the paper ["A Machine with Short-Term, Episodic, and Semantic Memory Systems"](https://doi.org/10.1609/aaai.v37i1.25075).
+The hyperparameters can be configured in [`train.yaml`](./train.yaml). The training results with the
+checkpoints will be saved at [`./training_results/`](./training_results/).
 
-## [Click here for the agent for RoomEnv-v2](./AgentRoomEnv2/README.md)
+## Results
 
-This agent was featured in the paper ["Capturing Dynamic Knowledge Graphs with Human-like Memory Systems by Reinforcement Learning"]().
+| Comparison of our methods and the baseline |
+| :----------------------------------------: |
+|      ![](./figures/final-results.png)      |
 
-## pdoc documentation
+| Q-values of memory management policy (test) |    Q-values of explore policy (test)     | Q-values of explore policy (baseline history room size of 24) (test) |
+| :-----------------------------------------: | :--------------------------------------: | :------------------------------------------------------------------: |
+|     ![](./figures/q-values-test-mm.png)     | ![](./figures/q-values-test-explore.png) |              ![](./figures/q-values-test-baseline.png)               |
 
-https://tae898.github.io/explicit-memory-private
+Also check out [`./trained-agents/`](./trained-agents) to see the saved training results.
+
+## Results
 
 ## Contributing
 
@@ -33,6 +47,18 @@ Contributions are what make the open source community such an amazing place to b
 1. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
 1. Push to the Branch (`git push origin feature/AmazingFeature`)
 1. Open a Pull Request
+
+## [Cite our paper]()
+
+```bibtex
+
+```
+
+## Authors
+
+- [Taewoon Kim](https://taewoon.kim/)
+- [Michael Cochez](https://www.cochez.nl/)
+- [Vincent Francois-Lavet](http://vincent.francois-l.be/)
 
 ## License
 
