@@ -36,7 +36,7 @@ train_seed: 8
 test_seed: 3
 device: cpu
 mm_policy: neural
-mm_agent_path: trained-agents/lstm-mm/2023-12-28 18:13:03.001952/agent.pkl
+mm_agent_path: trained-agents/mm/2023-12-28 18:13:03.001952/agent.pkl
 qa_policy: episodic_semantic
 env_config:
   question_prob: 1.0

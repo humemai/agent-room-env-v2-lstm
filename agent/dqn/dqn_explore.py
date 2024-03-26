@@ -64,7 +64,7 @@ class DQNExploreAgent(DQNAgent):
         mm_policy: str = "neural",
         mm_agent_path: (
             str | None
-        ) = "trained-agents/lstm-mm/2023-12-28 18:13:03.001952/agent.pkl",
+        ) = "trained-agents/mm/2023-12-28 18:13:03.001952/agent.pkl",
         qa_policy: str = "episodic_semantic",
         env_config: dict = {
             "question_prob": 1.0,
