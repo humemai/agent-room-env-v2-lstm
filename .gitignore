@@ -162,7 +162,7 @@ cython_debug/
 # checkpoints
 lightning_logs/
 lightning_logs.zip
-training_results/
+training-results/
 
 # vscode
 .vscode/

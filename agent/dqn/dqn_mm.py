@@ -77,7 +77,7 @@ class DQNMMAgent(DQNAgent):
         ddqn: bool = True,
         dueling_dqn: bool = True,
         split_reward_training: bool = False,
-        default_root_dir: str = "./training_results/DQN/mm",
+        default_root_dir: str = "./training-results/DQN/mm",
         run_handcrafted_baselines: bool = False,
     ) -> None:
         """Initialization.

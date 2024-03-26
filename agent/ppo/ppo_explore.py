@@ -77,7 +77,7 @@ class PPOExploreAgent(PPOAgent):
             "question_interval": 1,
             "include_walls_in_observations": True,
         },
-        default_root_dir: str = "./training_results/PPO/explore",
+        default_root_dir: str = "./training-results/PPO/explore",
         run_handcrafted_baselines: bool = False,
         run_neural_baseline: bool = False,
     ) -> None:

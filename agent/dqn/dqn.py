@@ -81,7 +81,7 @@ class DQNAgent(HandcraftedAgent):
         },
         ddqn: bool = True,
         dueling_dqn: bool = True,
-        default_root_dir: str = "./training_results/DQN/",
+        default_root_dir: str = "./training-results/DQN/",
         run_handcrafted_baselines: bool = False,
     ) -> None:
         """Initialization.

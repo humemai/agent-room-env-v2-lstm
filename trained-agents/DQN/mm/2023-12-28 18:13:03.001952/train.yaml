@@ -54,7 +54,7 @@ env_config:
 ddqn: true
 dueling_dqn: true
 split_reward_training: false
-default_root_dir: ./training_results/room_size=l/gamma=0.99/
+default_root_dir: ./training-results/room_size=l/gamma=0.99/
 run_handcrafted_baselines:
 - mm: random
   qa: episodic_semantic

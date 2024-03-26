@@ -79,7 +79,7 @@ class DQNExploreAgent(DQNAgent):
         },
         ddqn: bool = True,
         dueling_dqn: bool = True,
-        default_root_dir: str = "./training_results/DQN/explore",
+        default_root_dir: str = "./training-results/DQN/explore",
         run_handcrafted_baselines: bool = False,
         run_neural_baseline: bool = False,
     ) -> None:

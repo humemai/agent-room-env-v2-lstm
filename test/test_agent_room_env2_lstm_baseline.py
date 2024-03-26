@@ -59,7 +59,7 @@ class DQNLSTMBaselineAgentTest(unittest.TestCase):
             },
             "ddqn": True,
             "dueling_dqn": True,
-            "default_root_dir": "./training_results/",
+            "default_root_dir": "./training-results/",
             "run_handcrafted_baselines": True,
         }
 

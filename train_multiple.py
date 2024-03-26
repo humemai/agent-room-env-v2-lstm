@@ -62,7 +62,7 @@ params = {
     "ddqn": True,
     "dueling_dqn": True,
     "default_root_dir": None,
-    # "default_root_dir": f"./training_results/baselines/dqn/history_block_size={history_block_size}",
+    # "default_root_dir": f"./training-results/baselines/dqn/history_block_size={history_block_size}",
     "run_handcrafted_baselines": True,
 }
 
@@ -79,7 +79,7 @@ for history_block_size in [1]:
         params["train_seed"] = test_seed + 5
         params["history_block_size"] = history_block_size
         params["default_root_dir"] = (
-            f"./training_results/baselines/dqn/history_block_size={history_block_size}"
+            f"./training-results/baselines/dqn/history_block_size={history_block_size}"
         )
 
         config_file_name = (

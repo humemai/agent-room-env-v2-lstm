@@ -456,7 +456,7 @@ class PPOLSTMBaselineAgent:
             "question_interval": 1,
             "include_walls_in_observations": True,
         },
-        default_root_dir: str = "./training_results/PPO/baselines/",
+        default_root_dir: str = "./training-results/PPO/baselines/",
         run_handcrafted_baselines: bool = False,
     ) -> None:
         """Initialize the PPO LSTM Baseline Agent.

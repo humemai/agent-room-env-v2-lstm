@@ -50,5 +50,5 @@ env_config:
   question_interval: 1
   include_walls_in_observations: true
 split_reward_training: false
-default_root_dir: ./training_results/PPO/mm/
+default_root_dir: ./training-results/PPO/mm/
 run_handcrafted_baselines: null

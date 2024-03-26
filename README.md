@@ -22,7 +22,7 @@ python train.py
 ```
 
 The hyperparameters can be configured in [`train.yaml`](./train.yaml). The training results with the
-checkpoints will be saved at [`./training_results/`](./training_results/).
+checkpoints will be saved at [`./training-results/`](./training-results/).
 
 ## Results
 

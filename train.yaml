@@ -38,5 +38,5 @@ env_config:
   include_walls_in_observations: true
 ddqn: true
 dueling_dqn: true
-default_root_dir: ./training_results/
+default_root_dir: ./training-results/
 run_handcrafted_baselines: true

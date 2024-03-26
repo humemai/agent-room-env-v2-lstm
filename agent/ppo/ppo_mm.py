@@ -75,7 +75,7 @@ class PPOMMAgent(PPOAgent):
             "include_walls_in_observations": True,
         },
         split_reward_training: bool = False,
-        default_root_dir: str = "./training_results/PPO/mm/",
+        default_root_dir: str = "./training-results/PPO/mm/",
         run_handcrafted_baselines: bool = False,
     ) -> None:
         """Initialization.

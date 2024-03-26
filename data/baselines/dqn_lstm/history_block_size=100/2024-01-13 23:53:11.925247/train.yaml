@@ -38,5 +38,5 @@ env_config:
   include_walls_in_observations: true
 ddqn: true
 dueling_dqn: true
-default_root_dir: ./training_results/baselines/dqn/history_block_size=100
+default_root_dir: ./training-results/baselines/dqn/history_block_size=100
 run_handcrafted_baselines: true
