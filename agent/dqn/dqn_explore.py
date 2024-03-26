@@ -7,21 +7,20 @@ import numpy as np
 import torch
 from tqdm.auto import trange
 
-from explicit_memory.policy import (
+from humemai.policy import (
     answer_question,
     encode_observation,
     explore,
     manage_memory,
 )
-from explicit_memory.utils import write_yaml, read_pickle, read_yaml
+from humemai.utils import write_yaml, read_pickle, read_yaml
 
-from explicit_memory.utils.dqn import (
+from .dqn import DQNAgent
+from .utils import (
     target_hard_update,
     select_action,
     update_model,
 )
-
-from .dqn import DQNAgent
 
 
 class DQNExploreAgent(DQNAgent):
@@ -56,8 +55,6 @@ class DQNExploreAgent(DQNAgent):
             "num_layers": 2,
             "embedding_dim": 64,
             "make_categorical_embeddings": False,
-            "v1_params": None,
-            "v2_params": {},
             "memory_of_interest": [
                 "episodic",
                 "semantic",
@@ -91,7 +88,7 @@ class DQNExploreAgent(DQNAgent):
         },
         ddqn: bool = True,
         dueling_dqn: bool = True,
-        default_root_dir: str = "./training_results/DQN/LSTM/explore",
+        default_root_dir: str = "./training_results/DQN/explore",
         run_handcrafted_baselines: bool = False,
         run_neural_baseline: bool = False,
     ) -> None:

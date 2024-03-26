@@ -10,19 +10,19 @@ import numpy as np
 from IPython.display import clear_output
 from tqdm.auto import tqdm, trange
 
-from explicit_memory.memory import (
+from humemai.memory import (
     EpisodicMemory,
     MemorySystems,
     SemanticMemory,
     ShortMemory,
 )
-from explicit_memory.policy import (
+from humemai.policy import (
     answer_question,
     encode_observation,
     explore,
     manage_memory,
 )
-from explicit_memory.utils import write_yaml
+from humemai.utils import write_yaml
 
 
 class HandcraftedAgent:

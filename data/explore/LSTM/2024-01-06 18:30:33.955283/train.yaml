@@ -53,7 +53,7 @@ env_config:
   include_walls_in_observations: true
 ddqn: true
 dueling_dqn: true
-default_root_dir: ./training_results/explore/LSTM/
+default_root_dir: ./training_results/explore/
 run_handcrafted_baselines:
 - mm: random
   qa: episodic_semantic

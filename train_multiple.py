@@ -17,7 +17,7 @@ from copy import deepcopy
 
 from tqdm.auto import tqdm
 
-from explicit_memory.utils import write_yaml
+from humemai.utils import write_yaml
 
 # history_block_size = 6
 

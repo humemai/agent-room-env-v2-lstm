@@ -8,13 +8,9 @@ import numpy as np
 import torch
 from tqdm.auto import tqdm
 
-from explicit_memory.utils import write_yaml, read_yaml, read_pickle
-from explicit_memory.utils.ppo import (
-    save_states_actions_probs_values,
-    select_action,
-    update_model,
-)
-from explicit_memory.policy import (
+from humemai.utils import write_yaml, read_yaml, read_pickle
+
+from humemai.policy import (
     answer_question,
     encode_observation,
     explore,
@@ -22,6 +18,11 @@ from explicit_memory.policy import (
 )
 
 from .ppo import PPOAgent
+from .utils import (
+    save_states_actions_probs_values,
+    select_action,
+    update_model,
+)
 
 
 class PPOExploreAgent(PPOAgent):
@@ -55,8 +56,6 @@ class PPOExploreAgent(PPOAgent):
             "num_layers": 2,
             "embedding_dim": 64,
             "make_categorical_embeddings": False,
-            "v1_params": None,
-            "v2_params": {},
             "memory_of_interest": [
                 "episodic",
                 "semantic",
@@ -75,7 +74,7 @@ class PPOExploreAgent(PPOAgent):
         mm_policy: str = "neural",
         mm_agent_path: (
             str | None
-        ) = "trained-agents/PPO/mm/LSTM/2024-03-03 03:18:10.587529/agent.pkl",
+        ) = "trained-agents/PPO/mm/2024-03-03 03:18:10.587529/agent.pkl",
         qa_policy: str = "episodic_semantic",
         env_config: dict = {
             "question_prob": 1.0,
@@ -88,7 +87,7 @@ class PPOExploreAgent(PPOAgent):
             "question_interval": 1,
             "include_walls_in_observations": True,
         },
-        default_root_dir: str = "./training_results/PPO/LSTM/explore",
+        default_root_dir: str = "./training_results/PPO/explore",
         run_handcrafted_baselines: bool = False,
         run_neural_baseline: bool = False,
     ) -> None:

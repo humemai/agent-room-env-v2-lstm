@@ -14,9 +14,9 @@ import torch.optim as optim
 from room_env.envs.room2 import RoomEnv2
 from tqdm.auto import trange
 
-from explicit_memory.utils import is_running_notebook, positional_encoding, write_yaml
+from humemai.utils import is_running_notebook, positional_encoding, write_yaml
 
-from explicit_memory.utils.dqn import (
+from .utils import (
     ReplayBuffer,
     target_hard_update,
     plot_results,
@@ -346,7 +346,7 @@ class History:
         return None
 
     def explore(self, explore_policy: str) -> str:
-        """Explore the environment. The agent can either explore randomly or avoid 
+        """Explore the environment. The agent can either explore randomly or avoid
         walls. This is not reinforcement learning, but a simple heuristic.
 
         Args:
@@ -452,7 +452,7 @@ class DQNLSTMBaselineAgent:
         },
         ddqn: bool = True,
         dueling_dqn: bool = True,
-        default_root_dir: str = "./training_results/DQN/baselines/LSTM/",
+        default_root_dir: str = "./training_results/DQN/baselines/",
         run_handcrafted_baselines: bool = True,
     ) -> None:
         """Initialize the DQN LSTM Baseline Agent.

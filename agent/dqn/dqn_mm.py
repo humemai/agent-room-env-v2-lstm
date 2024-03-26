@@ -7,18 +7,16 @@ import gymnasium as gym
 import torch
 from tqdm.auto import trange
 
-from explicit_memory.policy import (
+from humemai.policy import (
     answer_question,
     encode_observation,
     explore,
     manage_memory,
 )
-
-from explicit_memory.utils import write_yaml
-
-from explicit_memory.utils.dqn import target_hard_update, select_action, update_model
+from humemai.utils import write_yaml
 
 from .dqn import DQNAgent
+from .utils import target_hard_update, select_action, update_model
 
 
 class DQNMMAgent(DQNAgent):
@@ -53,8 +51,6 @@ class DQNMMAgent(DQNAgent):
             "num_layers": 2,
             "embedding_dim": 64,
             "make_categorical_embeddings": False,
-            "v1_params": None,
-            "v2_params": {},
             "memory_of_interest": [
                 "episodic",
                 "semantic",
@@ -87,7 +83,7 @@ class DQNMMAgent(DQNAgent):
         ddqn: bool = True,
         dueling_dqn: bool = True,
         split_reward_training: bool = False,
-        default_root_dir: str = "./training_results/DQN/LSTM/mm",
+        default_root_dir: str = "./training_results/DQN/mm",
         run_handcrafted_baselines: bool = False,
     ) -> None:
         """Initialization.

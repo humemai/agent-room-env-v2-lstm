@@ -15,7 +15,6 @@ capacity:
   short: 1
 pretrain_semantic: false
 nn_params:
-  architecture: lstm
   hidden_size: 64
   num_layers: 2
   embedding_dim: 64
@@ -51,5 +50,5 @@ env_config:
   question_interval: 1
   include_walls_in_observations: true
 split_reward_training: false
-default_root_dir: ./training_results/PPO/mm/LSTM
+default_root_dir: ./training_results/PPO/mm/
 run_handcrafted_baselines: null

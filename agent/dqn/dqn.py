@@ -11,15 +11,15 @@ import torch
 import torch.optim as optim
 from room_env.envs.room2 import RoomEnv2
 
-from explicit_memory.nn import LSTM
-from explicit_memory.utils.dqn import (
+from .nn import LSTM
+from .utils import (
     ReplayBuffer,
     plot_results,
     save_final_results,
     save_validation,
     save_states_q_values_actions,
 )
-from explicit_memory.utils import is_running_notebook, write_yaml
+from humemai.utils import is_running_notebook, write_yaml
 
 
 from ..handcrafted import HandcraftedAgent
@@ -162,9 +162,6 @@ class DQNAgent(HandcraftedAgent):
         self.nn_params["entities"] = self.env.unwrapped.entities
         self.nn_params["relations"] = self.env.unwrapped.relations
         self.nn_params["dueling_dqn"] = self.dueling_dqn
-        self.nn_params["is_dqn_or_ppo"] = "dqn"
-        self.nn_params["is_actor"] = False
-        self.nn_params["is_critic"] = False
 
         self.val_filenames = []
         self.is_notebook = is_running_notebook()

@@ -11,17 +11,16 @@ import torch
 import torch.optim as optim
 from room_env.envs.room2 import RoomEnv2
 
-from explicit_memory.nn import LSTM
-from explicit_memory.utils.ppo import (
+from humemai.utils import is_running_notebook, write_yaml
+
+from ..handcrafted import HandcraftedAgent
+from .nn import LSTM
+from .utils import (
     save_states_actions_probs_values,
     save_validation,
     save_final_results,
     plot_results,
 )
-from explicit_memory.utils import is_running_notebook, write_yaml
-
-
-from ..handcrafted import HandcraftedAgent
 
 
 class PPOAgent(HandcraftedAgent):
@@ -53,8 +52,6 @@ class PPOAgent(HandcraftedAgent):
             "num_layers": 2,
             "embedding_dim": 64,
             "make_categorical_embeddings": False,
-            "v1_params": None,
-            "v2_params": {},
             "memory_of_interest": [
                 "episodic",
                 "semantic",
@@ -182,10 +179,10 @@ class PPOAgent(HandcraftedAgent):
             raise NotImplementedError
 
         self.actor = function_approximator(
-            **self.nn_params, is_dqn_or_ppo="ppo", is_actor=True, is_critic=False
+            **self.nn_params, is_actor=True, is_critic=False
         )
         self.critic = function_approximator(
-            **self.nn_params, is_dqn_or_ppo="ppo", is_actor=False, is_critic=True
+            **self.nn_params, is_actor=False, is_critic=True
         )
 
         # optimizer

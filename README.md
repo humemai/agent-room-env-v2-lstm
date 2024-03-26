@@ -1,18 +1,21 @@
 # Agent for RoomEnv-v2
 
-[![DOI](https://img.shields.io/badge/Paper-PDF-red.svg)]()
+[![DOI](https://zenodo.org/badge/776465360.svg)](https://zenodo.org/doi/10.5281/zenodo.10876433)
 
-This repo is to train an agent that interacts with the [RoomEnv-v2](https://github.com/tae898/room-env).
+<!-- [![DOI](https://img.shields.io/badge/Paper-PDF-red.svg)]() -->
+
+This repo is to train an agent that interacts with the [RoomEnv-v2](https://github.com/humemai/room-env).
 
 ## Prerequisites
 
 1. A unix or unix-like x86 machine
 1. python 3.10 or higher.
-1. Running in a virtual environment (e.g., conda, virtualenv, etc.) is highly recommended so that you don't mess up with the system python.
-1. Make sure you are in the same directory where this README is located, i.e., `AgentRoomEnv2`
-1. Install the `explicit_memory` python package, by running `pip install ..`
-   1. This will install the gymnasium environment [RoomEnv2](https://github.com/tae898/room-env)
-1. `pip install -r requirements.txt`
+1. Running in a virtual environment (e.g., conda, virtualenv, etc.) is highly
+   recommended so that you don't mess up with the system python.
+1. Install the `humemai` python package, by running `pip install
+git+https://github.com/humemai/humemai@main`
+1. Install the `room-env` python package, by running `pip install
+git+https://github.com/humemai/room-env@main`
 
 ## Run training
 
@@ -35,7 +38,10 @@ checkpoints will be saved at [`./training_results/`](./training_results/).
 
 Also check out [`./trained-agents/`](./trained-agents) to see the saved training results.
 
-## Results
+## pdoc documentation
+
+Click on [this link](https://humemai.github.io/agent-room-env-v1-lstm) to see the HTML rendered
+docstrings
 
 ## Contributing
 

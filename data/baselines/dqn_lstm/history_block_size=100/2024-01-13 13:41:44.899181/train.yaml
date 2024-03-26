@@ -10,7 +10,6 @@ min_epsilon: 0.1
 gamma: 0.9
 history_block_size: 100
 nn_params:
-  architecture: lstm
   hidden_size: 128
   num_layers: 2
   embedding_dim: 128

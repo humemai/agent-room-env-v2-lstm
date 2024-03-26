@@ -16,9 +16,9 @@ from room_env.envs.room2 import RoomEnv2
 from tqdm.auto import tqdm
 from torch.distributions import Categorical
 
-from explicit_memory.utils import is_running_notebook, positional_encoding, write_yaml
+from humemai.utils import is_running_notebook, positional_encoding, write_yaml
 
-from explicit_memory.utils.ppo import (
+from .utils import (
     plot_results,
     save_final_results,
     save_validation,

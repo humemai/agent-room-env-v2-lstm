@@ -8,13 +8,8 @@ import numpy as np
 import torch
 from tqdm.auto import tqdm
 
-from explicit_memory.utils import write_yaml
-from explicit_memory.utils.ppo import (
-    save_states_actions_probs_values,
-    select_action,
-    update_model,
-)
-from explicit_memory.policy import (
+from humemai.utils import write_yaml
+from humemai.policy import (
     answer_question,
     encode_observation,
     explore,
@@ -22,6 +17,11 @@ from explicit_memory.policy import (
 )
 
 from .ppo import PPOAgent
+from .utils import (
+    save_states_actions_probs_values,
+    select_action,
+    update_model,
+)
 
 
 class PPOMMAgent(PPOAgent):
@@ -86,7 +86,7 @@ class PPOMMAgent(PPOAgent):
             "include_walls_in_observations": True,
         },
         split_reward_training: bool = False,
-        default_root_dir: str = "./training_results/PPO/mm/LSTM/",
+        default_root_dir: str = "./training_results/PPO/mm/",
         run_handcrafted_baselines: bool = False,
     ) -> None:
         """Initialization.
