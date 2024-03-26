@@ -40,7 +40,7 @@ Also check out [`./trained-agents/`](./trained-agents) to see the saved training
 
 ## pdoc documentation
 
-Click on [this link](https://humemai.github.io/agent-room-env-v1-lstm) to see the HTML rendered
+Click on [this link](https://humemai.github.io/agent-room-env-v2-lstm) to see the HTML rendered
 docstrings
 
 ## Contributing

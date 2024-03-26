@@ -47,7 +47,6 @@ class PPOAgent(HandcraftedAgent):
         },
         pretrain_semantic: str | bool = False,
         nn_params: dict = {
-            "architecture": "lstm",
             "hidden_size": 64,
             "num_layers": 2,
             "embedding_dim": 64,
@@ -172,18 +171,8 @@ class PPOAgent(HandcraftedAgent):
             self.num_episodes / self.num_rollouts * self.num_steps_in_episode
         )
 
-        if self.nn_params["architecture"].lower() == "lstm":
-            function_approximator = LSTM
-            del self.nn_params["architecture"]
-        elif self.nn_params["architecture"].lower() == "stare":
-            raise NotImplementedError
-
-        self.actor = function_approximator(
-            **self.nn_params, is_actor=True, is_critic=False
-        )
-        self.critic = function_approximator(
-            **self.nn_params, is_actor=False, is_critic=True
-        )
+        self.actor = LSTM(**self.nn_params, is_actor=True, is_critic=False)
+        self.critic = LSTM(**self.nn_params, is_actor=False, is_critic=True)
 
         # optimizer
         self.actor_optimizer = optim.Adam(self.actor.parameters())

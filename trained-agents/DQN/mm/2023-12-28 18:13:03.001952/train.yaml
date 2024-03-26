@@ -16,7 +16,6 @@ capacity:
   short: 1
 pretrain_semantic: false
 nn_params:
-"architecture": "lstm",
   hidden_size: 64
   num_layers: 2
   embedding_dim: 64

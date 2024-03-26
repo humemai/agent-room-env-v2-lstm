@@ -54,12 +54,9 @@ class DQNMMAgentTest(unittest.TestCase):
                                         "gamma": 0.65,
                                         "capacity": capacity,
                                         "nn_params": {
-                                            "architecture": "lstm",
                                             "hidden_size": 4,
                                             "num_layers": 2,
                                             "embedding_dim": 4,
-                                            "v1_params": None,
-                                            "v2_params": {},
                                             "memory_of_interest": memory_of_interest,
                                             "include_positional_encoding": True,
                                             "max_timesteps": 100,

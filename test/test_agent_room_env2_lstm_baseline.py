@@ -32,7 +32,6 @@ class DQNLSTMBaselineAgentTest(unittest.TestCase):
             "gamma": 0.9,
             "history_block_size": 2,
             "nn_params": {
-                "architecture": "lstm",
                 "hidden_size": 4,
                 "num_layers": 2,
                 "embedding_dim": 4,

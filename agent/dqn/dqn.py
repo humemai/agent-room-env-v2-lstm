@@ -50,7 +50,6 @@ class DQNAgent(HandcraftedAgent):
         },
         pretrain_semantic: str | bool = False,
         nn_params: dict = {
-            "architecture": "lstm",
             "hidden_size": 64,
             "num_layers": 2,
             "embedding_dim": 64,
@@ -180,14 +179,8 @@ class DQNAgent(HandcraftedAgent):
         self.warm_start = warm_start
         assert self.batch_size <= self.warm_start <= self.replay_buffer_size
 
-        # networks: dqn, dqn_target
-        if self.nn_params["architecture"].lower() == "lstm":
-            function_approximator = LSTM
-            del self.nn_params["architecture"]
-        elif self.nn_params["architecture"].lower() == "stare":
-            raise NotImplementedError
-        self.dqn = function_approximator(**self.nn_params)
-        self.dqn_target = function_approximator(**self.nn_params)
+        self.dqn = LSTM(**self.nn_params)
+        self.dqn_target = LSTM(**self.nn_params)
         self.dqn_target.load_state_dict(self.dqn.state_dict())
         self.dqn_target.eval()
 

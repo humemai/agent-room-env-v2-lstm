@@ -50,7 +50,6 @@ class DQNExploreAgent(DQNAgent):
         },
         pretrain_semantic: bool = None,
         nn_params: dict = {
-            "architecture": "lstm",
             "hidden_size": 64,
             "num_layers": 2,
             "embedding_dim": 64,

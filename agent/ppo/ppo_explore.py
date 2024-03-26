@@ -51,7 +51,6 @@ class PPOExploreAgent(PPOAgent):
         },
         pretrain_semantic: str | bool = False,
         nn_params: dict = {
-            "architecture": "lstm",
             "hidden_size": 64,
             "num_layers": 2,
             "embedding_dim": 64,

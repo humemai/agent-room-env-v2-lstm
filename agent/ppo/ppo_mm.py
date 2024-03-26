@@ -50,13 +50,10 @@ class PPOMMAgent(PPOAgent):
         },
         pretrain_semantic: str | bool = False,
         nn_params: dict = {
-            "architecture": "lstm",
             "hidden_size": 64,
             "num_layers": 2,
             "embedding_dim": 64,
             "make_categorical_embeddings": False,
-            "v1_params": None,
-            "v2_params": {},
             "memory_of_interest": [
                 "episodic",
                 "semantic",

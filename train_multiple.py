@@ -34,7 +34,6 @@ params = {
     "gamma": 0.9,
     "history_block_size": None,
     "nn_params": {
-        "architecture": "lstm",
         "hidden_size": 128,
         "num_layers": 2,
         "embedding_dim": 128,
