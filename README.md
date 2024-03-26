@@ -4,7 +4,7 @@
 
 <!-- [![DOI](https://img.shields.io/badge/Paper-PDF-red.svg)]() -->
 
-This repo is to train an agent that interacts with the [RoomEnv-v2](https://github.com/humemai/room-env).
+This repo is to train an agent with an LSTM that interacts with the [RoomEnv-v2](https://github.com/humemai/room-env).
 
 ## Prerequisites
 
@@ -52,7 +52,7 @@ Contributions are what make the open source community such an amazing place to b
 1. Push to the Branch (`git push origin feature/AmazingFeature`)
 1. Open a Pull Request
 
-## [Cite our paper](<>)
+## [Cite our paper]()
 
 ```bibtex
 
