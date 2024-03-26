@@ -1,14 +1,13 @@
 """LSTM to approximate a function."""
 
-from typing import Literal
 from copy import deepcopy
+from typing import Literal
 
 import numpy as np
 import torch
+from humemai.utils import split_by_possessive
 from torch import nn
 from torch.distributions import Categorical
-
-from humemai.utils import split_by_possessive
 
 from ...utils import positional_encoding
 

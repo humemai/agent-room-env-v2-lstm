@@ -7,22 +7,13 @@ from copy import deepcopy
 
 import gymnasium as gym
 import numpy as np
+from humemai.memory import (EpisodicMemory, MemorySystems, SemanticMemory,
+                            ShortMemory)
+from humemai.policy import (answer_question, encode_observation, explore,
+                            manage_memory)
+from humemai.utils import write_yaml
 from IPython.display import clear_output
 from tqdm.auto import tqdm, trange
-
-from humemai.memory import (
-    EpisodicMemory,
-    MemorySystems,
-    SemanticMemory,
-    ShortMemory,
-)
-from humemai.policy import (
-    answer_question,
-    encode_observation,
-    explore,
-    manage_memory,
-)
-from humemai.utils import write_yaml
 
 
 class HandcraftedAgent:

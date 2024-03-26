@@ -1,7 +1,7 @@
 """LSTM to approximate a function."""
 
-from typing import Literal
 from copy import deepcopy
+from typing import Literal
 
 import numpy as np
 import torch

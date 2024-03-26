@@ -6,22 +6,14 @@ from copy import deepcopy
 import gymnasium as gym
 import numpy as np
 import torch
+from humemai.policy import (answer_question, encode_observation, explore,
+                            manage_memory)
+from humemai.utils import write_yaml
 from tqdm.auto import tqdm
 
-from humemai.utils import write_yaml
-from humemai.policy import (
-    answer_question,
-    encode_observation,
-    explore,
-    manage_memory,
-)
-
 from .ppo import PPOAgent
-from .utils import (
-    save_states_actions_probs_values,
-    select_action,
-    update_model,
-)
+from .utils import (save_states_actions_probs_values, select_action,
+                    update_model)
 
 
 class PPOMMAgent(PPOAgent):

@@ -11,21 +11,13 @@ import gymnasium as gym
 import numpy as np
 import torch
 import torch.optim as optim
+from humemai.utils import is_running_notebook, positional_encoding, write_yaml
 from room_env.envs.room2 import RoomEnv2
 from tqdm.auto import trange
 
-from humemai.utils import is_running_notebook, positional_encoding, write_yaml
-
-from .utils import (
-    ReplayBuffer,
-    target_hard_update,
-    plot_results,
-    save_final_results,
-    save_validation,
-    save_states_q_values_actions,
-    select_action,
-    update_model,
-)
+from .utils import (ReplayBuffer, plot_results, save_final_results,
+                    save_states_q_values_actions, save_validation,
+                    select_action, target_hard_update, update_model)
 
 
 class LSTM(torch.nn.Module):

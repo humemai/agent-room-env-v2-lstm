@@ -7,9 +7,9 @@ import logging
 logger = logging.getLogger()
 logger.disabled = True
 
-from agent.dqn import DQNExploreAgent, DQNLSTMBaselineAgent, DQNMMAgent
-
 from humemai.utils import read_yaml
+
+from agent.dqn import DQNExploreAgent, DQNLSTMBaselineAgent, DQNMMAgent
 
 parser = argparse.ArgumentParser(description="train")
 parser.add_argument(

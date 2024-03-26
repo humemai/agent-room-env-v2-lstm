@@ -2,25 +2,17 @@
 
 import os
 from copy import deepcopy
+
 import gymnasium as gym
 import numpy as np
 import torch
+from humemai.policy import (answer_question, encode_observation, explore,
+                            manage_memory)
+from humemai.utils import read_pickle, read_yaml, write_yaml
 from tqdm.auto import trange
 
-from humemai.policy import (
-    answer_question,
-    encode_observation,
-    explore,
-    manage_memory,
-)
-from humemai.utils import write_yaml, read_pickle, read_yaml
-
 from .dqn import DQNAgent
-from .utils import (
-    target_hard_update,
-    select_action,
-    update_model,
-)
+from .utils import select_action, target_hard_update, update_model
 
 
 class DQNExploreAgent(DQNAgent):

@@ -4,7 +4,7 @@
 
 1. Implement GNN (StarE)
    1. Write tests
-2. Implement PPO
+1. Implement PPO
    1. Write tests
 
 ## Done

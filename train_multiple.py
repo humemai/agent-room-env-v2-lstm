@@ -1,4 +1,5 @@
 """This script is to tran multiple train.py in parallel."""
+
 import datetime
 
 import matplotlib
@@ -15,9 +16,8 @@ import random
 import subprocess
 from copy import deepcopy
 
-from tqdm.auto import tqdm
-
 from humemai.utils import write_yaml
+from tqdm.auto import tqdm
 
 # history_block_size = 6
 
@@ -78,9 +78,9 @@ for history_block_size in [1]:
         params["test_seed"] = test_seed
         params["train_seed"] = test_seed + 5
         params["history_block_size"] = history_block_size
-        params[
-            "default_root_dir"
-        ] = f"./training_results/baselines/dqn_lstm/history_block_size={history_block_size}"
+        params["default_root_dir"] = (
+            f"./training_results/baselines/dqn_lstm/history_block_size={history_block_size}"
+        )
 
         config_file_name = (
             f"./junks/{str(datetime.datetime.now()).replace(' ', '-')}.yaml"

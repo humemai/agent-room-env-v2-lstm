@@ -10,22 +10,16 @@ from typing import Literal
 import gymnasium as gym
 import numpy as np
 import torch
-from torch import nn
 import torch.optim as optim
-from room_env.envs.room2 import RoomEnv2
-from tqdm.auto import tqdm
-from torch.distributions import Categorical
-
 from humemai.utils import is_running_notebook, positional_encoding, write_yaml
+from room_env.envs.room2 import RoomEnv2
+from torch import nn
+from torch.distributions import Categorical
+from tqdm.auto import tqdm
 
-from .utils import (
-    plot_results,
-    save_final_results,
-    save_validation,
-    select_action,
-    update_model,
-    save_states_actions_probs_values,
-)
+from .utils import (plot_results, save_final_results,
+                    save_states_actions_probs_values, save_validation,
+                    select_action, update_model)
 
 
 def init_layer_uniform(layer: nn.Linear, init_w: float = 3e-3) -> None:

@@ -9,20 +9,13 @@ import gymnasium as gym
 import numpy as np
 import torch
 import torch.optim as optim
+from humemai.utils import is_running_notebook, write_yaml
 from room_env.envs.room2 import RoomEnv2
 
-from .nn import LSTM
-from .utils import (
-    ReplayBuffer,
-    plot_results,
-    save_final_results,
-    save_validation,
-    save_states_q_values_actions,
-)
-from humemai.utils import is_running_notebook, write_yaml
-
-
 from ..handcrafted import HandcraftedAgent
+from .nn import LSTM
+from .utils import (ReplayBuffer, plot_results, save_final_results,
+                    save_states_q_values_actions, save_validation)
 
 
 class DQNAgent(HandcraftedAgent):

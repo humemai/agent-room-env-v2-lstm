@@ -12,10 +12,8 @@ This repo is to train an agent that interacts with the [RoomEnv-v2](https://gith
 1. python 3.10 or higher.
 1. Running in a virtual environment (e.g., conda, virtualenv, etc.) is highly
    recommended so that you don't mess up with the system python.
-1. Install the `humemai` python package, by running `pip install
-git+https://github.com/humemai/humemai@main`
-1. Install the `room-env` python package, by running `pip install
-git+https://github.com/humemai/room-env@main`
+1. Install the `humemai` python package, by running `pip install git+https://github.com/humemai/humemai@main`
+1. Install the `room-env` python package, by running `pip install git+https://github.com/humemai/room-env@main`
 
 ## Run training
 
@@ -54,7 +52,7 @@ Contributions are what make the open source community such an amazing place to b
 1. Push to the Branch (`git push origin feature/AmazingFeature`)
 1. Open a Pull Request
 
-## [Cite our paper]()
+## [Cite our paper](<>)
 
 ```bibtex
 

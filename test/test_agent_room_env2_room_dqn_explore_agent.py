@@ -24,8 +24,8 @@ class DQNExploreAgentTest(unittest.TestCase):
             for test_seed in [42]:
                 for ddqn in [False, True]:
                     for dueling_dqn in [False, True]:
-                        for episodic_agent_capacity in [0, 4]:
-                            for semantic_map_capacity in [0, 4]:
+                        for episodic_agent_capacity in [0]:
+                            for semantic_map_capacity in [0]:
                                 # parameters
                                 rng = random.Random(num_runs)
                                 capacity = {

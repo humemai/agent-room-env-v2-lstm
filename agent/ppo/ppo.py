@@ -9,18 +9,13 @@ import gymnasium as gym
 import numpy as np
 import torch
 import torch.optim as optim
-from room_env.envs.room2 import RoomEnv2
-
 from humemai.utils import is_running_notebook, write_yaml
+from room_env.envs.room2 import RoomEnv2
 
 from ..handcrafted import HandcraftedAgent
 from .nn import LSTM
-from .utils import (
-    save_states_actions_probs_values,
-    save_validation,
-    save_final_results,
-    plot_results,
-)
+from .utils import (plot_results, save_final_results,
+                    save_states_actions_probs_values, save_validation)
 
 
 class PPOAgent(HandcraftedAgent):

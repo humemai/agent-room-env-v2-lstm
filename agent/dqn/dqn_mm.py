@@ -5,18 +5,13 @@ from copy import deepcopy
 
 import gymnasium as gym
 import torch
+from humemai.policy import (answer_question, encode_observation, explore,
+                            manage_memory)
+from humemai.utils import write_yaml
 from tqdm.auto import trange
 
-from humemai.policy import (
-    answer_question,
-    encode_observation,
-    explore,
-    manage_memory,
-)
-from humemai.utils import write_yaml
-
 from .dqn import DQNAgent
-from .utils import target_hard_update, select_action, update_model
+from .utils import select_action, target_hard_update, update_model
 
 
 class DQNMMAgent(DQNAgent):

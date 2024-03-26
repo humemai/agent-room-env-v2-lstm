@@ -1,3 +1,3 @@
-from .dqn import DQNMMAgent, DQNExploreAgent, DQNLSTMBaselineAgent
-from .ppo import PPOMMAgent, PPOExploreAgent, PPOLSTMBaselineAgent
+from .dqn import DQNExploreAgent, DQNLSTMBaselineAgent, DQNMMAgent
 from .handcrafted import HandcraftedAgent
+from .ppo import PPOExploreAgent, PPOLSTMBaselineAgent, PPOMMAgent
