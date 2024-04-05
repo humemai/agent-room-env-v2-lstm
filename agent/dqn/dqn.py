@@ -4,6 +4,7 @@ This should be inherited. This itself should not be used.
 """
 
 import os
+from copy import deepcopy
 
 import gymnasium as gym
 import numpy as np
@@ -81,7 +82,7 @@ class DQNAgent(HandcraftedAgent):
         },
         ddqn: bool = True,
         dueling_dqn: bool = True,
-        default_root_dir: str = "./training-results/DQN/",
+        default_root_dir: str = "./stochastic-objects/training-results/DQN/",
         run_handcrafted_baselines: bool = False,
     ) -> None:
         """Initialization.
@@ -236,15 +237,27 @@ class DQNAgent(HandcraftedAgent):
             }
         write_yaml(results, os.path.join(self.default_root_dir, "handcrafted.yaml"))
 
+    def get_deepcopied_memory_state(self) -> dict:
+        """Get a deepcopied memory state.
+
+        This is necessary because the memory state is a list of dictionaries, which is
+        mutable.
+
+        Returns:
+            deepcopied memory_state
+        """
+        return deepcopy(self.memory_systems.return_as_a_dict_list())
+
     def fill_replay_buffer(self) -> None:
         """Make the replay buffer full in the beginning with the uniformly-sampled
         actions. The filling continues until it reaches the warm start size.
 
         """
-        pass
+        raise NotImplementedError("Should be implemented by the inherited class!")
 
     def train(self) -> None:
         """Code for training"""
+        raise NotImplementedError("Should be implemented by the inherited class!")
 
     def validate(self) -> None:
         self.dqn.eval()

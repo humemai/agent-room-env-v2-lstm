@@ -49,6 +49,5 @@ env_config:
   num_total_questions: 1000
   question_interval: 1
   include_walls_in_observations: true
-split_reward_training: false
 default_root_dir: ./training-results/PPO/mm/
 run_handcrafted_baselines: null

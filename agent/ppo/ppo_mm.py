@@ -74,7 +74,6 @@ class PPOMMAgent(PPOAgent):
             "question_interval": 1,
             "include_walls_in_observations": True,
         },
-        split_reward_training: bool = False,
         default_root_dir: str = "./training-results/PPO/mm/",
         run_handcrafted_baselines: bool = False,
     ) -> None:
@@ -112,7 +111,6 @@ class PPOMMAgent(PPOAgent):
                 seed: seed for env
                 room_size: The room configuration to use. Choose one of "dev", "xxs",
                     "xs", "s", "m", or "l".
-            split_reward_training: whether to split the rewards during training
             default_root_dir: default root directory to save results
             run_handcrafted_baselines: whether to run handcrafted baselines
 
@@ -121,8 +119,6 @@ class PPOMMAgent(PPOAgent):
         del all_params["self"]
         del all_params["__class__"]
         self.all_params = deepcopy(all_params)
-        del all_params["split_reward_training"]
-        self.split_reward_training = split_reward_training
 
         # action: 1. move to episodic, 2. move to semantic, 3. forget
         self.action2str = {0: "episodic", 1: "semantic", 2: "forget"}
@@ -257,11 +253,7 @@ class PPOMMAgent(PPOAgent):
 
                 score += reward
 
-                if self.split_reward_training:
-                    reward = reward / num_mm_actions
-                    rewards = [reward] * (num_mm_actions)
-                else:
-                    rewards = [0] * (num_mm_actions - 1) + [reward]
+                rewards = [0] * (num_mm_actions - 1) + [reward]
 
                 for reward in rewards:
                     reward = np.reshape(reward, (1, -1)).astype(np.float64)

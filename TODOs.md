@@ -17,4 +17,3 @@
    1. max_strength: int | None = None,
 1. positional encoding
 1. avoid_walls
-1. split_reward_training (?)

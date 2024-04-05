@@ -10,12 +10,6 @@ from torch import nn
 from ...utils import positional_encoding
 
 
-def init_layer_uniform(layer: nn.Linear, init_w: float = 3e-3) -> None:
-    """Init uniform parameters on the single layer."""
-    layer.weight.data.uniform_(-init_w, init_w)
-    layer.bias.data.uniform_(-init_w, init_w)
-
-
 class LSTM(nn.Module):
     """A simple LSTM network."""
 

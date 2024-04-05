@@ -53,7 +53,6 @@ env_config:
   include_walls_in_observations: true
 ddqn: true
 dueling_dqn: true
-split_reward_training: false
 default_root_dir: ./training-results/room_size=l/gamma=0.99/
 run_handcrafted_baselines:
 - mm: random

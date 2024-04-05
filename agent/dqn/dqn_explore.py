@@ -9,10 +9,10 @@ import torch
 from humemai.policy import (answer_question, encode_observation, explore,
                             manage_memory)
 from humemai.utils import read_pickle, read_yaml, write_yaml
-from tqdm.auto import trange
 
 from .dqn import DQNAgent
-from .utils import select_action, target_hard_update, update_model
+from .utils import (select_action, target_hard_update, update_epsilon,
+                    update_model)
 
 
 class DQNExploreAgent(DQNAgent):
@@ -79,8 +79,7 @@ class DQNExploreAgent(DQNAgent):
         },
         ddqn: bool = True,
         dueling_dqn: bool = True,
-        default_root_dir: str = "./training-results/DQN/explore",
-        run_handcrafted_baselines: bool = False,
+        default_root_dir: str = "./stochastic-objects/training-results/DQN/explore",
         run_neural_baseline: bool = False,
     ) -> None:
         """Initialization.
@@ -121,13 +120,13 @@ class DQNExploreAgent(DQNAgent):
             ddqn: whether to use double DQN
             dueling_dqn: whether to use dueling DQN
             default_root_dir: default root directory to save results
-            run_handcrafted_baselines: whether to run handcrafted baselines
             run_neural_baseline: whether to run neural baseline
 
         """
         all_params = deepcopy(locals())
         del all_params["self"]
         del all_params["__class__"]
+        all_params["run_handcrafted_baselines"] = all_params["run_neural_baseline"]
         self.all_params = deepcopy(all_params)
         del all_params["mm_agent_path"]
         del all_params["run_neural_baseline"]
@@ -176,6 +175,24 @@ class DQNExploreAgent(DQNAgent):
         self.env_config["seed"] = self.train_seed
         self.env = gym.make(self.env_str, **self.env_config)
 
+    def process_room_observations(self, observations_room: list):
+        """Process room observations.
+
+        Args:
+            observations_room: observations["room"] from the environment
+
+        """
+        observations_room = self.manage_agent_and_map_memory(observations_room)
+        for obs in observations_room:
+            encode_observation(self.memory_systems, obs)
+            manage_memory(
+                memory_systems=self.memory_systems,
+                policy=self.mm_policy,
+                mm_policy_model=self.mm_policy_model,
+                mm_policy_model_type="q_function",
+                split_possessive=False,
+            )
+
     def run_neural_baseline(self) -> None:
         """Run the neural baseline."""
         self.env_config["seed"] = self.test_seed
@@ -188,19 +205,11 @@ class DQNExploreAgent(DQNAgent):
             self.init_memory_systems()
             observations, info = self.env.reset()
 
-            observations_ = self.manage_agent_and_map_memory(observations["room"])
-
-            for obs in observations_:
-                encode_observation(self.memory_systems, obs)
-                manage_memory(
-                    memory_systems=self.memory_systems,
-                    policy=self.mm_policy,
-                    mm_policy_model=self.mm_policy_model,
-                    mm_policy_model_type="q_function",
-                    split_possessive=False,
-                )
-
             while True:
+
+                self.process_room_observations(observations["room"])
+
+                action_explore = explore(self.memory_systems, "avoid_walls")
                 actions_qa = [
                     answer_question(
                         self.memory_systems,
@@ -210,7 +219,6 @@ class DQNExploreAgent(DQNAgent):
                     )
                     for question in observations["questions"]
                 ]
-                action_explore = explore(self.memory_systems, "avoid_walls")
 
                 action_pair = (actions_qa, action_explore)
                 (
@@ -223,26 +231,63 @@ class DQNExploreAgent(DQNAgent):
                 score += reward
                 done = done or truncated
 
-                observations["room"] = self.manage_agent_and_map_memory(
-                    observations["room"]
-                )
-
-                for obs in observations["room"]:
-                    encode_observation(self.memory_systems, obs)
-                    manage_memory(
-                        memory_systems=self.memory_systems,
-                        policy=self.mm_policy,
-                        mm_policy_model=self.mm_policy_model,
-                        mm_policy_model_type="q_function",
-                        split_possessive=False,
-                    )
-
                 if done:
                     break
 
             scores.append(score)
 
         return np.mean(scores).item(), np.std(scores).item()
+
+    def step(
+        self, state: dict, questions: list, greedy: bool
+    ) -> tuple[dict, int, float, bool, list]:
+        """Step through the environment.
+
+        This is the only place where env.step() is called. Make sure to call this
+        function to interact with the environment.
+
+        Args:
+            state: state of the memory systems
+            questions: questions to answer
+            greedy: whether to act greedily
+
+        Returns:
+            observations: observations from the environment
+            action_explore: exploration action taken
+            reward: reward received
+            done: whether the episode is done
+            q_values: q values (list of floats)
+
+        """
+        # select explore action
+        action_explore, q_values = select_action(
+            state=state,
+            greedy=greedy,
+            dqn=self.dqn,
+            epsilon=self.epsilon,
+            action_space=self.action_space,
+        )
+        actions_qa = [
+            answer_question(
+                self.memory_systems,
+                self.qa_policy,
+                question,
+                split_possessive=False,
+            )
+            for question in questions
+        ]
+
+        action_pair = (actions_qa, self.action2str[action_explore])
+        (
+            observations,
+            reward,
+            done,
+            truncated,
+            info,
+        ) = self.env.step(action_pair)
+        done = done or truncated
+
+        return observations, action_explore, reward, done, q_values
 
     def fill_replay_buffer(self) -> None:
         """Make the replay buffer full in the beginning with the uniformly-sampled
@@ -251,77 +296,31 @@ class DQNExploreAgent(DQNAgent):
         For explore_policy == "rl"
 
         """
+        new_episode_starts = True
         while len(self.replay_buffer) < self.warm_start:
-            self.init_memory_systems()
-            observations, info = self.env.reset()
 
-            observations["room"] = self.manage_agent_and_map_memory(
-                observations["room"]
-            )
+            if new_episode_starts:
+                self.init_memory_systems()
+                observations, info = self.env.reset()
+                done = False
+                self.process_room_observations(observations["room"])
+                new_episode_starts = False
 
-            for obs in observations["room"]:
-                encode_observation(self.memory_systems, obs)
-                manage_memory(
-                    memory_systems=self.memory_systems,
-                    policy=self.mm_policy,
-                    mm_policy_model=self.mm_policy_model,
-                    mm_policy_model_type="q_function",
-                    split_possessive=False,
+            else:
+                state = self.get_deepcopied_memory_state()
+                observations, action, reward, done, q_values = self.step(
+                    state, observations["questions"], greedy=False
                 )
+                self.process_room_observations(observations["room"])
+                next_state = self.get_deepcopied_memory_state()
+                self.replay_buffer.store(*[state, action, reward, next_state, done])
 
-            while True:
-                actions_qa = [
-                    answer_question(
-                        self.memory_systems,
-                        self.qa_policy,
-                        question,
-                        split_possessive=False,
-                    )
-                    for question in observations["questions"]
-                ]
-                state = self.memory_systems.return_as_a_dict_list()
-                action, q_values_ = select_action(
-                    state=state,
-                    greedy=False,
-                    dqn=self.dqn,
-                    epsilon=self.epsilon,
-                    action_space=self.action_space,
-                )
-                action_pair = (actions_qa, self.action2str[action])
-                (
-                    observations,
-                    reward,
-                    done,
-                    truncated,
-                    info,
-                ) = self.env.step(action_pair)
-                done = done or truncated
-
-                observations["room"] = self.manage_agent_and_map_memory(
-                    observations["room"]
-                )
-
-                for obs in observations["room"]:
-                    encode_observation(self.memory_systems, obs)
-                    manage_memory(
-                        memory_systems=self.memory_systems,
-                        policy=self.mm_policy,
-                        mm_policy_model=self.mm_policy_model,
-                        mm_policy_model_type="q_function",
-                        split_possessive=False,
-                    )
-
-                next_state = self.memory_systems.return_as_a_dict_list()
-                transition = [state, action, reward, next_state, done]
-                self.replay_buffer.store(*transition)
-
-                if done or len(self.replay_buffer) >= self.warm_start:
-                    break
+            if done:
+                new_episode_starts = True
 
     def train(self) -> None:
         """Train the explore agent."""
         self.fill_replay_buffer()  # fill up the buffer till warm start size
-        super().train()
         self.num_validation = 0
 
         self.epsilons = []
@@ -330,219 +329,127 @@ class DQNExploreAgent(DQNAgent):
 
         self.dqn.train()
 
-        training_episode_begins = True
-
+        new_episode_starts = True
         score = 0
-        bar = trange(1, self.num_iterations + 1)
-        for self.iteration_idx in bar:
-            if training_episode_begins:
+
+        self.iteration_idx = 0
+
+        while True:
+            if new_episode_starts:
                 self.init_memory_systems()
                 observations, info = self.env.reset()
+                done = False
+                self.process_room_observations(observations["room"])
+                new_episode_starts = False
 
-                observations["room"] = self.manage_agent_and_map_memory(
-                    observations["room"]
+            else:
+                state = self.get_deepcopied_memory_state()
+                observations, action, reward, done, q_values = self.step(
+                    state, observations["questions"], greedy=False
                 )
+                self.process_room_observations(observations["room"])
+                next_state = self.get_deepcopied_memory_state()
+                self.replay_buffer.store(*[state, action, reward, next_state, done])
+                self.q_values["train"].append(q_values)
+                score += reward
+                self.iteration_idx += 1
 
-                for obs in observations["room"]:
-                    encode_observation(self.memory_systems, obs)
-                    manage_memory(
-                        memory_systems=self.memory_systems,
-                        policy=self.mm_policy,
-                        mm_policy_model=self.mm_policy_model,
-                        mm_policy_model_type="q_function",
-                        split_possessive=False,
-                    )
+            if done:
+                new_episode_starts = True
 
-            actions_qa = [
-                answer_question(
-                    self.memory_systems,
-                    self.qa_policy,
-                    question,
-                    split_possessive=False,
-                )
-                for question in observations["questions"]
-            ]
-
-            state = self.memory_systems.return_as_a_dict_list()
-            action, q_values_ = select_action(
-                state=state,
-                greedy=False,
-                dqn=self.dqn,
-                epsilon=self.epsilon,
-                action_space=self.action_space,
-            )
-            self.q_values["train"].append(q_values_)
-
-            action_pair = (actions_qa, self.action2str[action])
-            (
-                observations,
-                reward,
-                done,
-                truncated,
-                info,
-            ) = self.env.step(action_pair)
-            score += reward
-            done = done or truncated
-
-            if not done:
-                observations["room"] = self.manage_agent_and_map_memory(
-                    observations["room"]
-                )
-
-                for obs in observations["room"]:
-                    encode_observation(self.memory_systems, obs)
-                    manage_memory(
-                        memory_systems=self.memory_systems,
-                        policy=self.mm_policy,
-                        mm_policy_model=self.mm_policy_model,
-                        mm_policy_model_type="q_function",
-                        split_possessive=False,
-                    )
-                next_state = self.memory_systems.return_as_a_dict_list()
-                transition = [state, action, reward, next_state, done]
-                self.replay_buffer.store(*transition)
-
-                training_episode_begins = False
-
-            else:  # if episode ends
                 self.scores["train"].append(score)
                 score = 0
                 with torch.no_grad():
                     self.validate()
 
-                training_episode_begins = True
+            if not new_episode_starts:
+                loss = update_model(
+                    replay_buffer=self.replay_buffer,
+                    optimizer=self.optimizer,
+                    device=self.device,
+                    dqn=self.dqn,
+                    dqn_target=self.dqn_target,
+                    ddqn=self.ddqn,
+                    gamma=self.gamma,
+                )
 
-            loss = update_model(
-                replay_buffer=self.replay_buffer,
-                optimizer=self.optimizer,
-                device=self.device,
-                dqn=self.dqn,
-                dqn_target=self.dqn_target,
-                ddqn=self.ddqn,
-                gamma=self.gamma,
-            )
-            self.training_loss.append(loss)
+                self.training_loss.append(loss)
 
-            # linearly decrease epsilon
-            self.epsilon = max(
-                self.min_epsilon,
-                self.epsilon
-                - (self.max_epsilon - self.min_epsilon) / self.epsilon_decay_until,
-            )
-            self.epsilons.append(self.epsilon)
+                # linearly decay epsilon
+                self.epsilon = update_epsilon(
+                    self.epsilon,
+                    self.max_epsilon,
+                    self.min_epsilon,
+                    self.epsilon_decay_until,
+                )
+                self.epsilons.append(self.epsilon)
 
-            # if hard update is needed
-            if self.iteration_idx % self.target_update_interval == 0:
-                target_hard_update(dqn=self.dqn, dqn_target=self.dqn_target)
+                # if hard update is needed
+                if self.iteration_idx % self.target_update_interval == 0:
+                    target_hard_update(self.dqn, self.dqn_target)
 
-            # plotting & show training results
-            if (
-                self.iteration_idx == self.num_iterations
-                or self.iteration_idx % self.plotting_interval == 0
-            ):
-                self.plot_results("all", save_fig=True)
+                # plotting & show training results
+                if (
+                    self.iteration_idx == self.num_iterations
+                    or self.iteration_idx % self.plotting_interval == 0
+                ):
+                    self.plot_results("all", save_fig=True)
+
+                if self.iteration_idx == self.num_iterations:
+                    break
 
         with torch.no_grad():
             self.test()
 
         self.env.close()
 
-    def validate_test_middle(self, val_or_test: str) -> tuple[list[float], dict]:
+    def validate_test_middle(self, val_or_test: str) -> tuple[list, list, list, list]:
         """A function shared by explore validation and test in the middle.
 
         Args:
             val_or_test: "val" or "test"
 
         Returns:
-            scores_temp = a list of total episde rewards
-            states = memory states
-            q_values = q values
-            actions = greey actions taken
+            scores_local: a list of total episode rewards
+            states_local: memory states
+            q_values_local: q values
+            actions_local: greey actions taken
 
         """
-        scores_temp = []
-        states = []
-        q_values = []
-        actions = []
+        scores_local = []
+        states_local = []
+        q_values_local = []
+        actions_local = []
 
         for idx in range(self.num_samples_for_results):
-            if idx == self.num_samples_for_results - 1:
-                save_results = True
-            else:
-                save_results = False
+            new_episode_starts = True
             score = 0
-
-            self.init_memory_systems()
-            observations, info = self.env.reset()
-
-            observations["room"] = self.manage_agent_and_map_memory(
-                observations["room"]
-            )
-
-            for obs in observations["room"]:
-                encode_observation(self.memory_systems, obs)
-                manage_memory(
-                    memory_systems=self.memory_systems,
-                    policy=self.mm_policy,
-                    mm_policy_model=self.mm_policy_model,
-                    mm_policy_model_type="q_function",
-                    split_possessive=False,
-                )
-
             while True:
-                actions_qa = [
-                    answer_question(
-                        self.memory_systems,
-                        self.qa_policy,
-                        question,
-                        split_possessive=False,
+                if new_episode_starts:
+                    self.init_memory_systems()
+                    observations, info = self.env.reset()
+                    done = False
+                    self.process_room_observations(observations["room"])
+                    new_episode_starts = False
+
+                else:
+                    state = self.get_deepcopied_memory_state()
+                    observations, action, reward, done, q_values = self.step(
+                        state, observations["questions"], greedy=True
                     )
-                    for question in observations["questions"]
-                ]
-                state = self.memory_systems.return_as_a_dict_list()
-                if save_results:
-                    states.append(deepcopy(state))
+                    if not done:
+                        self.process_room_observations(observations["room"])
+                    score += reward
 
-                action, q_values_ = select_action(
-                    state=state,
-                    greedy=True,
-                    dqn=self.dqn,
-                    epsilon=self.epsilon,
-                    action_space=self.action_space,
-                )
-                if save_results:
-                    q_values.append(q_values_)
-                    actions.append(action)
-                    self.q_values[val_or_test].append(q_values_)
-
-                action_pair = (actions_qa, self.action2str[action])
-                (
-                    observations,
-                    reward,
-                    done,
-                    truncated,
-                    info,
-                ) = self.env.step(action_pair)
-                score += reward
-                done = done or truncated
+                    if idx == self.num_samples_for_results - 1:
+                        states_local.append(state)
+                        q_values_local.append(q_values)
+                        self.q_values[val_or_test].append(q_values)
+                        actions_local.append(action)
 
                 if done:
                     break
 
-                observations["room"] = self.manage_agent_and_map_memory(
-                    observations["room"]
-                )
+            scores_local.append(score)
 
-                for obs in observations["room"]:
-                    encode_observation(self.memory_systems, obs)
-                    manage_memory(
-                        memory_systems=self.memory_systems,
-                        policy=self.mm_policy,
-                        mm_policy_model=self.mm_policy_model,
-                        mm_policy_model_type="q_function",
-                        split_possessive=False,
-                    )
-
-            scores_temp.append(score)
-
-        return scores_temp, states, q_values, actions
+        return scores_local, states_local, q_values_local, actions_local

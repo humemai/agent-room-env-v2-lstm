@@ -13,11 +13,11 @@ import torch
 import torch.optim as optim
 from humemai.utils import is_running_notebook, positional_encoding, write_yaml
 from room_env.envs.room2 import RoomEnv2
-from tqdm.auto import trange
 
 from .utils import (ReplayBuffer, plot_results, save_final_results,
                     save_states_q_values_actions, save_validation,
-                    select_action, target_hard_update, update_model)
+                    select_action, target_hard_update, update_epsilon,
+                    update_model)
 
 
 class LSTM(torch.nn.Module):
@@ -443,7 +443,7 @@ class DQNLSTMBaselineAgent:
         },
         ddqn: bool = True,
         dueling_dqn: bool = True,
-        default_root_dir: str = "./training-results/DQN/baselines/",
+        default_root_dir: str = "./stochastic-objects/training-results/DQN/baselines/",
         run_handcrafted_baselines: bool = True,
     ) -> None:
         """Initialize the DQN LSTM Baseline Agent.
@@ -569,10 +569,10 @@ class DQNLSTMBaselineAgent:
                 self.history.add_block(observations["room"])
 
                 while True:
+                    action_explore = self.history.explore(explore_policy)
                     actions_qa = self.history.answer_questions(
                         observations["questions"]
                     )
-                    action_explore = self.history.explore(explore_policy)
 
                     action_pair = (actions_qa, action_explore)
                     (
@@ -613,51 +613,75 @@ class DQNLSTMBaselineAgent:
         """Remove the results from the disk."""
         shutil.rmtree(self.default_root_dir)
 
+    def step(
+        self, state: dict, questions: list, greedy: bool
+    ) -> tuple[dict, int, float, bool, list]:
+        """Step through the environment.
+
+        This is the only place where env.step() is called. Make sure to call this
+        function to interact with the environment.
+
+        Args:
+            state: state of the history
+            questions: questions to answer
+            greedy: whether to act greedily
+
+        Returns:
+            observations: observations from the environment
+            action_explore: exploration action taken
+            reward: reward received
+            done: whether the episode is done
+            q_values: q values (list of floats)
+
+        """
+        # select explore action
+        action_explore, q_values = select_action(
+            state=state,
+            greedy=greedy,
+            dqn=self.dqn,
+            epsilon=self.epsilon,
+            action_space=self.action_space,
+        )
+        actions_qa = self.history.answer_questions(questions)
+
+        action_pair = (actions_qa, self.action2str[action_explore])
+        (
+            observations,
+            reward,
+            done,
+            truncated,
+            info,
+        ) = self.env.step(action_pair)
+        done = done or truncated
+
+        return observations, action_explore, reward, done, q_values
+
     def fill_replay_buffer(self) -> None:
         """Make the replay buffer full in the beginning with the uniformly-sampled
         actions. The filling continues until it reaches the warm start size.
 
         """
+        new_episode_starts = True
         while len(self.replay_buffer) < self.warm_start:
-            observations, info = self.env.reset()
-            self.history = History(self.history_block_size)
-            self.history.add_block(observations["room"])
 
-            while True:
-                actions_qa = self.history.answer_questions(observations["questions"])
-                state = {"data": self.history.to_list()}
-                # action_explore = self.str2action[self.history.explore("avoid_walls")]
-                action_explore, q_values_ = select_action(
-                    state=state,
-                    greedy=False,
-                    dqn=self.dqn,
-                    epsilon=self.epsilon,
-                    action_space=self.action_space,
-                )
-                action_pair = (actions_qa, self.action2str[action_explore])
-                (
-                    observations,
-                    reward,
-                    done,
-                    truncated,
-                    info,
-                ) = self.env.step(action_pair)
-                done = done or truncated
-
+            if new_episode_starts:
+                self.history = History(self.history_block_size)
+                observations, info = self.env.reset()
+                done = False
                 self.history.add_block(observations["room"])
+                new_episode_starts = False
 
-                next_state = {"data": self.history.to_list()}
-                transition = [
-                    deepcopy(state),
-                    action_explore,
-                    reward,
-                    deepcopy(next_state),
-                    done,
-                ]
-                self.replay_buffer.store(*transition)
+            else:
+                state = deepcopy({"data": self.history.to_list()})
+                observations, action, reward, done, q_values = self.step(
+                    state, observations["questions"], greedy=False
+                )
+                self.history.add_block(observations["room"])
+                next_state = deepcopy({"data": self.history.to_list()})
+                self.replay_buffer.store(*[state, action, reward, next_state, done])
 
-                if done or len(self.replay_buffer) >= self.warm_start:
-                    break
+            if done:
+                new_episode_starts = True
 
     def train(self) -> None:
         """Train the explore agent."""
@@ -670,90 +694,74 @@ class DQNLSTMBaselineAgent:
 
         self.dqn.train()
 
-        training_episode_begins = True
-
+        new_episode_starts = True
         score = 0
-        bar = trange(1, self.num_iterations + 1)
-        for self.iteration_idx in bar:
-            if training_episode_begins:
-                observations, info = self.env.reset()
+
+        self.iteration_idx = 0
+
+        while True:
+            if new_episode_starts:
                 self.history = History(self.history_block_size)
+                observations, info = self.env.reset()
+                done = False
                 self.history.add_block(observations["room"])
+                new_episode_starts = False
 
-            actions_qa = self.history.answer_questions(observations["questions"])
-            state = {"data": self.history.to_list()}
-
-            action_explore, q_values_ = select_action(
-                state=state,
-                greedy=False,
-                dqn=self.dqn,
-                epsilon=self.epsilon,
-                action_space=self.action_space,
-            )
-            self.q_values["train"].append(q_values_)
-
-            action_pair = (actions_qa, self.action2str[action_explore])
-            (
-                observations,
-                reward,
-                done,
-                truncated,
-                info,
-            ) = self.env.step(action_pair)
-            score += reward
-            done = done or truncated
-
-            if not done:
+            else:
+                state = deepcopy({"data": self.history.to_list()})
+                observations, action, reward, done, q_values = self.step(
+                    state, observations["questions"], greedy=False
+                )
                 self.history.add_block(observations["room"])
-                next_state = {"data": self.history.to_list()}
-                transition = [
-                    deepcopy(state),
-                    action_explore,
-                    reward,
-                    deepcopy(next_state),
-                    done,
-                ]
-                self.replay_buffer.store(*transition)
+                next_state = deepcopy({"data": self.history.to_list()})
+                self.replay_buffer.store(*[state, action, reward, next_state, done])
+                self.q_values["train"].append(q_values)
+                score += reward
+                self.iteration_idx += 1
 
-                training_episode_begins = False
+            if done:
+                new_episode_starts = True
 
-            else:  # if episode ends
                 self.scores["train"].append(score)
                 score = 0
                 with torch.no_grad():
                     self.validate()
 
-                training_episode_begins = True
+            if not new_episode_starts:
+                loss = update_model(
+                    replay_buffer=self.replay_buffer,
+                    optimizer=self.optimizer,
+                    device=self.device,
+                    dqn=self.dqn,
+                    dqn_target=self.dqn_target,
+                    ddqn=self.ddqn,
+                    gamma=self.gamma,
+                )
 
-            loss = update_model(
-                replay_buffer=self.replay_buffer,
-                optimizer=self.optimizer,
-                device=self.device,
-                dqn=self.dqn,
-                dqn_target=self.dqn_target,
-                ddqn=self.ddqn,
-                gamma=self.gamma,
-            )
-            self.training_loss.append(loss)
+                self.training_loss.append(loss)
 
-            # linearly decrease epsilon
-            self.epsilon = max(
-                self.min_epsilon,
-                self.epsilon
-                - (self.max_epsilon - self.min_epsilon) / self.epsilon_decay_until,
-            )
-            self.epsilons.append(self.epsilon)
+                # linearly decay epsilon
+                self.epsilon = update_epsilon(
+                    self.epsilon,
+                    self.max_epsilon,
+                    self.min_epsilon,
+                    self.epsilon_decay_until,
+                )
+                self.epsilons.append(self.epsilon)
 
-            # if hard update is needed
-            if self.iteration_idx % self.target_update_interval == 0:
-                target_hard_update(dqn=self.dqn, dqn_target=self.dqn_target)
+                # if hard update is needed
+                if self.iteration_idx % self.target_update_interval == 0:
+                    target_hard_update(self.dqn, self.dqn_target)
 
-            # plotting & show training results
-            if (
-                self.iteration_idx == self.num_iterations
-                or self.iteration_idx % self.plotting_interval == 0
-            ):
-                self.plot_results("all", save_fig=True)
+                # plotting & show training results
+                if (
+                    self.iteration_idx == self.num_iterations
+                    or self.iteration_idx % self.plotting_interval == 0
+                ):
+                    self.plot_results("all", save_fig=True)
+
+                if self.iteration_idx == self.num_iterations:
+                    break
 
         with torch.no_grad():
             self.test()
@@ -761,72 +769,55 @@ class DQNLSTMBaselineAgent:
         self.env.close()
 
     def validate_test_middle(self, val_or_test: str) -> tuple[list[float], dict]:
-        """Validate or test the agent.
+        """A function shared by explore validation and test in the middle.
 
         Args:
-            val_or_test: "val" or "test".
+            val_or_test: "val" or "test"
 
         Returns:
-            scores_temp: Scores.
-            states: States.
-            q_values: Q-values.
-            actions: Actions.
+            scores_local: a list of total episode rewards
+            states_local: memory states
+            q_values_local: q values
+            actions_local: greey actions taken
 
         """
-        scores_temp = []
-        states = []
-        q_values = []
-        actions = []
+        scores_local = []
+        states_local = []
+        q_values_local = []
+        actions_local = []
 
         for idx in range(self.num_samples_for_results):
-            if idx == self.num_samples_for_results - 1:
-                save_results = True
-            else:
-                save_results = False
+            new_episode_starts = True
             score = 0
-
-            observations, info = self.env.reset()
-            self.history = History(self.history_block_size)
-            self.history.add_block(observations["room"])
-
             while True:
-                actions_qa = self.history.answer_questions(observations["questions"])
-                state = {"data": self.history.to_list()}
+                if new_episode_starts:
+                    self.history = History(self.history_block_size)
+                    observations, info = self.env.reset()
+                    done = False
+                    self.history.add_block(observations["room"])
+                    new_episode_starts = False
 
-                if save_results:
-                    states.append(deepcopy(state))
+                else:
+                    state = deepcopy({"data": self.history.to_list()})
+                    observations, action, reward, done, q_values = self.step(
+                        state, observations["questions"], greedy=True
+                    )
+                    if not done:
+                        self.history.add_block(observations["room"])
+                    score += reward
 
-                action_explore, q_values_ = select_action(
-                    state=state,
-                    greedy=True,
-                    dqn=self.dqn,
-                    epsilon=self.epsilon,
-                    action_space=self.action_space,
-                )
-                if save_results:
-                    q_values.append(q_values_)
-                    actions.append(action_explore)
-                    self.q_values[val_or_test].append(q_values_)
-
-                action_pair = (actions_qa, self.action2str[action_explore])
-                (
-                    observations,
-                    reward,
-                    done,
-                    truncated,
-                    info,
-                ) = self.env.step(action_pair)
-                score += reward
-                done = done or truncated
+                    if idx == self.num_samples_for_results - 1:
+                        states_local.append(state)
+                        q_values_local.append(q_values)
+                        self.q_values[val_or_test].append(q_values)
+                        actions_local.append(action)
 
                 if done:
                     break
 
-                self.history.add_block(observations["room"])
+            scores_local.append(score)
 
-            scores_temp.append(score)
-
-        return scores_temp, states, q_values, actions
+        return scores_local, states_local, q_values_local, actions_local
 
     def validate(self) -> None:
         """Validate the agent."""

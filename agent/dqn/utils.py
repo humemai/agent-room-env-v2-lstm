@@ -609,11 +609,11 @@ def compute_loss(
             rew: float,
             next_obs: np.ndarray,
             done: bool,
-        device:
-        dqn:
-        dqn_target:
-        ddqn:
-        gamma:
+        device: cpu or cuda
+        dqn: dqn model
+        dqn_target: dqn target model
+        ddqn: whether to use double dqn or not
+        gamma: discount factor
 
     Returns:
         loss: torch.Tensor
@@ -652,7 +652,7 @@ def select_action(
     epsilon: float,
     action_space: gym.spaces.Discrete,
 ) -> tuple[int, list]:
-    """Select an action from the input state.
+    """Select an action from the input state, with epsilon-greedy policy.
 
     Args:
         state: The current state of the memory systems. This is NOT what the gym env
@@ -665,10 +665,9 @@ def select_action(
         q_values: a list of q values for each action.
 
     """
-    # epsilon greedy policy
     q_values = dqn(np.array([state])).detach().cpu().tolist()[0]
 
-    if epsilon < np.random.random() or greedy:
+    if greedy or epsilon < np.random.random():
         selected_action = argmax(q_values)
     else:
         selected_action = action_space.sample().item()
@@ -685,7 +684,20 @@ def update_model(
     ddqn: str,
     gamma: float,
 ) -> torch.Tensor:
-    """Update the model by gradient descent."""
+    """Update the model by gradient descent.
+
+    Args:
+        replay_buffer: replay buffer
+        optimizer: optimizer
+        device: cpu or cuda
+        dqn: dqn model
+        dqn_target: dqn target model
+        ddqn: whether to use double dqn or not
+        gamma: discount factor
+
+    Returns:
+        loss: temporal difference loss value
+    """
     samples = replay_buffer.sample_batch()
 
     loss = compute_loss(samples, device, dqn, dqn_target, ddqn, gamma)
@@ -759,6 +771,9 @@ def save_states_q_values_actions(
         states: a list of states.
         q_values: a list of q_values.
         actions: a list of actions.
+        default_root_dir: the root directory where the results are saved.
+        val_or_test: "val" or "test"
+        num_validation: the current validation episode.
 
     """
     if val_or_test.lower() == "val":
@@ -778,8 +793,35 @@ def save_states_q_values_actions(
 
 
 def target_hard_update(dqn: torch.nn.Module, dqn_target: torch.nn.Module) -> None:
-    """Hard update: target <- local."""
+    """Hard update: target <- local.
+
+    Args:
+        dqn: dqn model
+        dqn_target: dqn target model
+    """
     dqn_target.load_state_dict(dqn.state_dict())
+
+
+def update_epsilon(
+    epsilon: float, max_epsilon: float, min_epsilon: float, epsilon_decay_until: int
+) -> float:
+    """Linearly decrease epsilon
+
+    Args:
+        epsilon: current epsilon
+        max_epsilon: initial epsilon
+        min_epsilon: minimum epsilon
+        epsilon_decay_until: the last iteration index to decay epsilon
+
+    Returns:
+        epsilon: updated epsilon
+
+    """
+    epsilon = max(
+        min_epsilon, epsilon - (max_epsilon - min_epsilon) / epsilon_decay_until
+    )
+
+    return epsilon
 
 
 class SegmentTree:
