@@ -443,7 +443,7 @@ class DQNLSTMBaselineAgent:
         },
         ddqn: bool = True,
         dueling_dqn: bool = True,
-        default_root_dir: str = "./stochastic-objects/training-results/DQN/baselines/",
+        default_root_dir: str = "./training-results/stochastic-objects/DQN/baselines/",
         run_handcrafted_baselines: bool = True,
     ) -> None:
         """Initialize the DQN LSTM Baseline Agent.

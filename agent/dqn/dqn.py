@@ -48,8 +48,6 @@ class DQNAgent(HandcraftedAgent):
             "num_layers": 2,
             "embedding_dim": 64,
             "make_categorical_embeddings": False,
-            "v1_params": None,
-            "v2_params": {},
             "memory_of_interest": [
                 "episodic",
                 "semantic",
@@ -82,7 +80,7 @@ class DQNAgent(HandcraftedAgent):
         },
         ddqn: bool = True,
         dueling_dqn: bool = True,
-        default_root_dir: str = "./stochastic-objects/training-results/DQN/",
+        default_root_dir: str = "./training-results/stochastic-objects/DQN/",
         run_handcrafted_baselines: bool = False,
     ) -> None:
         """Initialization.

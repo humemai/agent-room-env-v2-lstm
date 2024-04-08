@@ -76,7 +76,7 @@ class DQNMMAgent(DQNAgent):
         },
         ddqn: bool = True,
         dueling_dqn: bool = True,
-        default_root_dir: str = "./stochastic-objects/training-results/DQN/mm",
+        default_root_dir: str = "./training-results/stochastic-objects/DQN/mm",
         run_handcrafted_baselines: bool = False,
     ) -> None:
         """Initialization.
