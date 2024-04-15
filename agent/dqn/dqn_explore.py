@@ -6,13 +6,11 @@ from copy import deepcopy
 import gymnasium as gym
 import numpy as np
 import torch
-from humemai.policy import (answer_question, encode_observation, explore,
-                            manage_memory)
+from humemai.policy import answer_question, encode_observation, explore, manage_memory
 from humemai.utils import read_pickle, read_yaml, write_yaml
 
 from .dqn import DQNAgent
-from .utils import (select_action, target_hard_update, update_epsilon,
-                    update_model)
+from .utils import select_action, target_hard_update, update_epsilon, update_model
 
 
 class DQNExploreAgent(DQNAgent):
