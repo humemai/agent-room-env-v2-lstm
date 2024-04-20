@@ -37,6 +37,6 @@ env_config:
   question_interval: 1
   include_walls_in_observations: true
 ddqn: true
-dueling_dqn: true
+dueling_dqn: false
 default_root_dir: ./training-results/
 run_handcrafted_baselines: true

@@ -1,0 +1,36 @@
+'{''mm'': ''random'', ''qa'': ''episodic_semantic'', ''explore'': ''random'', ''pretrain_semantic'': False}':
+  mean: 194.38
+  std: 33.04157381239581
+'{''mm'': ''random'', ''qa'': ''episodic_semantic'', ''explore'': ''random'', ''pretrain_semantic'': ''exclude_walls''}':
+  mean: 180.56
+  std: 28.088901722922525
+'{''mm'': ''random'', ''qa'': ''episodic_semantic'', ''explore'': ''avoid_walls'', ''pretrain_semantic'': False}':
+  mean: 236.03999999999996
+  std: 18.48551865650515
+'{''mm'': ''random'', ''qa'': ''episodic_semantic'', ''explore'': ''avoid_walls'', ''pretrain_semantic'': ''exclude_walls''}':
+  mean: 227.71999999999997
+  std: 21.71344284078414
+'{''mm'': ''episodic'', ''qa'': ''episodic_semantic'', ''explore'': ''random'', ''pretrain_semantic'': False}':
+  mean: 97.32000000000001
+  std: 8.730956419545342
+'{''mm'': ''episodic'', ''qa'': ''episodic_semantic'', ''explore'': ''random'', ''pretrain_semantic'': ''exclude_walls''}':
+  mean: 97.32000000000001
+  std: 8.730956419545342
+'{''mm'': ''episodic'', ''qa'': ''episodic_semantic'', ''explore'': ''avoid_walls'', ''pretrain_semantic'': False}':
+  mean: 136.5
+  std: 15.034360644869473
+'{''mm'': ''episodic'', ''qa'': ''episodic_semantic'', ''explore'': ''avoid_walls'', ''pretrain_semantic'': ''exclude_walls''}':
+  mean: 157.0
+  std: 14.040370365485382
+'{''mm'': ''semantic'', ''qa'': ''episodic_semantic'', ''explore'': ''random'', ''pretrain_semantic'': False}':
+  mean: 101.73999999999998
+  std: 16.40373128285147
+'{''mm'': ''semantic'', ''qa'': ''episodic_semantic'', ''explore'': ''random'', ''pretrain_semantic'': ''exclude_walls''}':
+  mean: 103.58
+  std: 13.928158528678516
+'{''mm'': ''semantic'', ''qa'': ''episodic_semantic'', ''explore'': ''avoid_walls'', ''pretrain_semantic'': False}':
+  mean: 133.54000000000002
+  std: 15.589432318080092
+'{''mm'': ''semantic'', ''qa'': ''episodic_semantic'', ''explore'': ''avoid_walls'', ''pretrain_semantic'': ''exclude_walls''}':
+  mean: 183.2
+  std: 22.24221212020064
