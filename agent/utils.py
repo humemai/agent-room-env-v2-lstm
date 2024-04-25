@@ -21,58 +21,6 @@ logging.basicConfig(
 )
 
 
-def remove_timestamp(entry: list[str]) -> list:
-    """Remove the timestamp from a given observation/episodic memory.
-
-    Args:
-        entry: An observation / episodic memory in a quadruple format
-            (i.e., (head, relation, tail, timestamp))
-
-    Returns:
-        entry_without_timestamp: i.e., (head, relation, tail)
-
-    """
-    assert len(entry) == 4
-    logging.debug(f"Removing timestamp from {entry} ...")
-    entry_without_timestamp = entry[:-1]
-    logging.info(f"Timestamp is removed from {entry}: {entry_without_timestamp}")
-
-    return entry_without_timestamp
-
-
-def split_by_possessive(name_entity: str) -> tuple[str, str]:
-    """Separate name and entity from the given string.
-
-    Args:
-        name_entity: e.g., "tae's laptop"
-
-    Returns:
-        name: e.g., tae
-        entity: e.g., laptop
-
-    """
-    logging.debug(f"spliting name and entity from {name_entity}")
-    if "'s " in name_entity:
-        name, entity = name_entity.split("'s ")
-    else:
-        name, entity = None, None
-
-    return name, entity
-
-
-def remove_posession(entity: str) -> str:
-    """Remove name from the entity.
-
-    Args:
-        entity: e.g., bob's laptop
-
-    Returns:
-        e.g., laptop
-
-    """
-    return entity.split("'s ")[-1]
-
-
 def seed_everything(seed: int) -> None:
     """Seed every randomness to seed"""
     random.seed(seed)
