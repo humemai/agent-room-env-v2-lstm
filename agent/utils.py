@@ -161,47 +161,6 @@ def list_duplicates_of(seq, item) -> list:
     return locs
 
 
-def rename_training_dirs(root_dir: str = "./training-results/"):
-    old_dirs = []
-    new_dirs = []
-    for foo in glob(os.path.join(root_dir, "*")):
-        bar = glob(os.path.join(foo, "*/*/*test*"))
-        if len(bar) == 0:
-            continue
-        bar = bar[0]
-        old_dir = "/".join(bar.split("/")[:-1])
-        old_dirs.append(old_dir)
-        hparams = read_yaml(os.path.join(old_dir, "hparams.yaml"))
-
-        allow_random_human = hparams["allow_random_human"]
-        allow_random_question = hparams["allow_random_question"]
-        pretrain_semantic = hparams["pretrain_semantic"]
-        varying_rewards = hparams["varying_rewards"]
-        capacity = hparams["capacity"]["episodic"] + hparams["capacity"]["semantic"]
-        question_prob = hparams["question_prob"]
-        des_size = hparams["des_size"]
-        seed = hparams["seed"]
-
-        new_dir = (
-            f"training-results/"
-            f"allow_random_human={allow_random_human}_"
-            f"allow_random_question={allow_random_question}_"
-            f"pretrain_semantic={pretrain_semantic}_"
-            f"varying_rewards={varying_rewards}_"
-            f"des_size={des_size}_"
-            f"capacity={capacity}_"
-            f"question_prob={question_prob}_"
-            f"seed={seed}"
-        )
-        new_dirs.append(new_dir)
-        os.rename(old_dir, new_dir)
-
-    for foo in glob(os.path.join(root_dir, "*/lightning_logs")):
-        if len(os.listdir(foo)) == 0:
-            dir_to_delete = os.path.dirname(foo)
-            shutil.rmtree(dir_to_delete)
-
-
 def is_running_notebook() -> bool:
     """See if the code is running in a notebook or not."""
     try:
