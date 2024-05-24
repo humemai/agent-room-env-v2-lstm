@@ -16,7 +16,7 @@ class LSTM(nn.Module):
     def __init__(
         self,
         capacity: dict,
-        entities: list,
+        entities: list | dict,
         relations: list,
         n_actions: int,
         memory_of_interest: list,
