@@ -5,13 +5,11 @@ from copy import deepcopy
 
 import gymnasium as gym
 import torch
-from humemai.policy import (answer_question, encode_observation, explore,
-                            manage_memory)
+from humemai.policy import answer_question, encode_observation, explore, manage_memory
 from humemai.utils import write_yaml
 
 from .dqn import DQNAgent
-from .utils import (select_action, target_hard_update, update_epsilon,
-                    update_model)
+from .utils import select_action, target_hard_update, update_epsilon, update_model
 
 
 class DQNMMAgent(DQNAgent):
@@ -127,7 +125,12 @@ class DQNMMAgent(DQNAgent):
         self.all_params = deepcopy(all_params)
 
         # action: 1. move to episodic, 2. move to semantic, 3. forget
-        self.action2str = {0: "episodic", 1: "semantic", 2: "forget"}
+        if capacity["episodic"] > 0 and capacity["semantic"] > 0:
+            self.action2str = {0: "episodic", 1: "semantic", 2: "forget"}
+        elif capacity["episodic"] > 0:
+            self.action2str = {0: "episodic", 1: "forget"}
+        elif capacity["semantic"] > 0:
+            self.action2str = {0: "semantic", 1: "forget"}
         self.action_space = gym.spaces.Discrete(len(self.action2str))
 
         all_params["nn_params"]["n_actions"] = len(self.action2str)
