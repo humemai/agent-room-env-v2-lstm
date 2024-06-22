@@ -15,8 +15,13 @@ from room_env.envs.room2 import RoomEnv2
 
 from ..handcrafted import HandcraftedAgent
 from .nn import LSTM
-from .utils import (ReplayBuffer, plot_results, save_final_results,
-                    save_states_q_values_actions, save_validation)
+from .utils import (
+    ReplayBuffer,
+    plot_results,
+    save_final_results,
+    save_states_q_values_actions,
+    save_validation,
+)
 
 
 class DQNAgent(HandcraftedAgent):
@@ -80,7 +85,7 @@ class DQNAgent(HandcraftedAgent):
         },
         ddqn: bool = True,
         dueling_dqn: bool = True,
-        default_root_dir: str = "./training-results/stochastic-objects/DQN/",
+        default_root_dir: str = "./training-results/",
         run_handcrafted_baselines: bool = False,
     ) -> None:
         """Initialization.
@@ -196,6 +201,10 @@ class DQNAgent(HandcraftedAgent):
         env.render("image", save_fig_dir=self.default_root_dir)
         del env
 
+        pretrain_semantic_ = (
+            [False, "exclude_walls"] if self.capacity["semantic"] > 0 else [False]
+        )
+
         policies = [
             {
                 "mm": mm,
@@ -206,7 +215,7 @@ class DQNAgent(HandcraftedAgent):
             for mm in ["random", "episodic", "semantic"]
             for qa in ["episodic_semantic"]
             for explore in ["random", "avoid_walls"]
-            for pretrain_semantic in [False, "exclude_walls"]
+            for pretrain_semantic in pretrain_semantic_
         ]
 
         results = {}

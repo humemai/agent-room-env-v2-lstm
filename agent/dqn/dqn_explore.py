@@ -6,13 +6,17 @@ from copy import deepcopy
 import gymnasium as gym
 import numpy as np
 import torch
-from humemai.policy import (answer_question, encode_observation, explore,
-                            manage_memory)
+from humemai.policy import (
+    answer_question,
+    encode_observation,
+    explore,
+    manage_memory,
+    argmax,
+)
 from humemai.utils import read_pickle, read_yaml, write_yaml
 
 from .dqn import DQNAgent
-from .utils import (select_action, target_hard_update, update_epsilon,
-                    update_model)
+from .utils import select_action, target_hard_update, update_epsilon, update_model
 
 
 class DQNExploreAgent(DQNAgent):
@@ -40,7 +44,7 @@ class DQNExploreAgent(DQNAgent):
             "semantic_map": 0,
             "short": 1,
         },
-        pretrain_semantic: bool = None,
+        pretrain_semantic: str | bool = False,
         nn_params: dict = {
             "hidden_size": 64,
             "num_layers": 2,
@@ -79,7 +83,7 @@ class DQNExploreAgent(DQNAgent):
         },
         ddqn: bool = True,
         dueling_dqn: bool = True,
-        default_root_dir: str = "./stochastic-objects/training-results/DQN/explore",
+        default_root_dir: str = "./training-results/explore",
         run_neural_baseline: bool = False,
     ) -> None:
         """Initialization.
@@ -143,6 +147,7 @@ class DQNExploreAgent(DQNAgent):
             self.mm_agent = read_pickle(mm_agent_path)
             self.mm_agent.dqn.eval()
             self.mm_policy_model = self.mm_agent.dqn
+            self.mm_action2str = self.mm_agent.action2str
         else:
             self.mm_policy_model = None
 
@@ -185,11 +190,19 @@ class DQNExploreAgent(DQNAgent):
         observations_room = self.manage_agent_and_map_memory(observations_room)
         for obs in observations_room:
             encode_observation(self.memory_systems, obs)
+
+            state = self.memory_systems.return_as_a_dict_list()
+            with torch.no_grad():
+                q_values = (
+                    self.mm_policy_model(np.array([state])).detach().cpu().tolist()[0]
+                )
+                selected_action = argmax(q_values)
+
+            mm_policy = self.mm_action2str[selected_action]
+
             manage_memory(
                 memory_systems=self.memory_systems,
-                policy=self.mm_policy,
-                mm_policy_model=self.mm_policy_model,
-                mm_policy_model_type="q_function",
+                policy=mm_policy,
                 split_possessive=False,
             )
 
