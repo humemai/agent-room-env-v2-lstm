@@ -148,8 +148,6 @@ class DQNExploreAgent(DQNAgent):
             self.mm_agent.dqn.eval()
             self.mm_policy_model = self.mm_agent.dqn
             self.mm_action2str = self.mm_agent.action2str
-        else:
-            self.mm_policy_model = None
 
         if run_neural_baseline:
             with torch.no_grad():
@@ -192,17 +190,26 @@ class DQNExploreAgent(DQNAgent):
             encode_observation(self.memory_systems, obs)
 
             state = self.memory_systems.return_as_a_dict_list()
-            with torch.no_grad():
-                q_values = (
-                    self.mm_policy_model(np.array([state])).detach().cpu().tolist()[0]
-                )
-                selected_action = argmax(q_values)
 
-            mm_policy = self.mm_action2str[selected_action]
+            if self.mm_policy == "neural":
+
+                with torch.no_grad():
+                    q_values = (
+                        self.mm_policy_model(np.array([state]))
+                        .detach()
+                        .cpu()
+                        .tolist()[0]
+                    )
+                    selected_action = argmax(q_values)
+
+                mm_action = self.mm_action2str[selected_action]
+
+            else:
+                mm_action = self.mm_policy
 
             manage_memory(
                 memory_systems=self.memory_systems,
-                policy=mm_policy,
+                policy=mm_action,
                 split_possessive=False,
             )
 
