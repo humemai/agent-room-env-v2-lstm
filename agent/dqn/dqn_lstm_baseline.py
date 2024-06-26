@@ -1,15 +1,15 @@
-"""DQN LSTM Baseline Agent for the RoomEnv2 environment."""
+"""DQN LSTM MLP Baseline Agent for the RoomEnv2 environment."""
 
 import datetime
 import os
 import random
 import shutil
 from copy import deepcopy
-from typing import Literal
 
 import gymnasium as gym
 import numpy as np
 import torch
+from torch import nn
 import torch.optim as optim
 from humemai.utils import is_running_notebook, write_yaml
 from room_env.envs.room2 import RoomEnv2
@@ -26,117 +26,46 @@ from .utils import (
     update_model,
 )
 
-from ..utils import positional_encoding
-
 
 class LSTM(torch.nn.Module):
-    """LSTM for the DQN baseline. This is different from the LSTM used for the memory-
-    based agents."""
+    """LSTMMLP for the DQN baseline."""
 
     def __init__(
         self,
         entities: list,
         relations: list,
-        n_actions: int,
-        max_step_reward: int,
         hidden_size: int = 64,
         num_layers: int = 2,
         embedding_dim: int = 64,
-        make_categorical_embeddings: bool = False,
-        batch_first: bool = True,
         device: str = "cpu",
-        dueling_dqn: bool = True,
-        fuse_information: Literal["concat", "sum"] = "sum",
-        include_positional_encoding: bool = True,
-        max_timesteps: int | None = None,
-        max_strength: int | None = None,
     ) -> None:
-        """Initialize the LSTM.
+        """Initialize the LSTMMLP.
 
         Args:
             entities: List of entities.
             relations: List of relations.
-            n_actions: Number of actions.
-            max_step_reward: Maximum reward per step.
             hidden_size: Hidden size of the LSTM.
             num_layers: Number of layers in the LSTM.
             embedding_dim: Dimension of the embeddings.
-            make_categorical_embeddings: Whether to make categorical embeddings.
-            batch_first: Whether batch is first.
             device: Device to use.
-            dueling_dqn: Whether to use dueling DQN.
-            fuse_information: How to fuse information.
-            include_positional_encoding: Whether to include positional encoding.
-            max_timesteps: Maximum timesteps.
-            max_strength: Maximum strength.
 
         """
         super().__init__()
         self.entities = entities
         self.relations = relations
-        self.n_actions = n_actions
-        self.max_step_reward = max_step_reward
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.embedding_dim = embedding_dim
-        self.make_categorical_embeddings = make_categorical_embeddings
-        self.batch_first = batch_first
         self.device = device
-        self.dueling_dqn = dueling_dqn
-        self.fuse_information = fuse_information
-        self.include_positional_encoding = include_positional_encoding
-        self.max_timesteps = max_timesteps
-        self.max_strength = max_strength
 
         self.create_embeddings()
-        if self.include_positional_encoding:
-            assert self.max_timesteps is not None
-            assert self.max_strength is not None
-            self.positional_encoding = positional_encoding(
-                positions=max(self.max_timesteps, self.max_strength) + 1,
-                dimensions=self.input_size,
-                scaling_factor=10000,
-                return_tensor=True,
-            )
-
         self.lstm = torch.nn.LSTM(
-            self.input_size,
+            self.embedding_dim,
             self.hidden_size,
             self.num_layers,
-            batch_first=self.batch_first,
+            batch_first=True,
             device=self.device,
         )
-
-        self.advantage_layer = torch.nn.Sequential(
-            torch.nn.Linear(
-                self.hidden_size,
-                self.hidden_size,
-                device=self.device,
-            ),
-            torch.nn.ReLU(),
-            torch.nn.Linear(
-                self.hidden_size,
-                n_actions,
-                device=self.device,
-            ),
-        )
-
-        if self.dueling_dqn:
-            self.value_layer = torch.nn.Sequential(
-                torch.nn.Linear(
-                    self.hidden_size,
-                    self.hidden_size,
-                    device=self.device,
-                ),
-                torch.nn.ReLU(),
-                torch.nn.Linear(
-                    self.hidden_size,
-                    1,
-                    device=self.device,
-                ),
-            )
-
-        self.relu = torch.nn.ReLU()
 
     def create_embeddings(self) -> None:
         """Create learnable embeddings."""
@@ -145,6 +74,7 @@ class LSTM(torch.nn.Module):
                 ["<PAD>"]
                 + [name for names in self.entities.values() for name in names]
                 + self.relations
+                + ["current_time", "timestamp", "strength"]
             )
         elif isinstance(self.entities, list):
             self.word2idx = ["<PAD>"] + self.entities + self.relations
@@ -155,43 +85,12 @@ class LSTM(torch.nn.Module):
             )
         self.word2idx = {word: idx for idx, word in enumerate(self.word2idx)}
 
-        self.embeddings = torch.nn.Embedding(
+        self.embeddings = nn.Embedding(
             len(self.word2idx),
             self.embedding_dim,
             device=self.device,
             padding_idx=0,
         )
-
-        if self.make_categorical_embeddings:
-            # Assuming self.entities is a dictionary where keys are categories and
-            # values are lists of entity names
-
-            # Create a dictionary to keep track of starting index for each category
-            category_start_indices = {}
-            current_index = 1  # Start from 1 to skip the <PAD> token
-            for category, names in self.entities.items():
-                category_start_indices[category] = current_index
-                current_index += len(names)
-
-            # Re-initialize embeddings by category
-            for category, start_idx in category_start_indices.items():
-                end_idx = start_idx + len(self.entities[category])
-                init_vector = torch.randn(self.embedding_dim, device=self.device)
-                self.embeddings.weight.data[start_idx:end_idx] = init_vector.repeat(
-                    end_idx - start_idx, 1
-                )
-            # Note: Relations are not re-initialized by category, assuming they are
-            # separate from entities
-
-        if self.fuse_information == "concat":
-            self.input_size = self.embedding_dim * 3
-        elif self.fuse_information == "sum":
-            self.input_size = self.embedding_dim
-        else:
-            raise ValueError(
-                f"fuse_information should be one of 'concat' or 'sum', but "
-                f"{self.fuse_information} was given!"
-            )
 
     def make_embedding(self, obs: list[str]) -> torch.Tensor:
         """Create one embedding vector with summation or concatenation.
@@ -204,25 +103,9 @@ class LSTM(torch.nn.Module):
 
         """
         if obs == ["<PAD>", "<PAD>", "<PAD>", "<PAD>"]:
-            if self.fuse_information == "sum":
-                return self.embeddings(
-                    torch.tensor(self.word2idx["<PAD>"], device=self.device)
-                )
-            else:
-                final_embedding = torch.concat(
-                    [
-                        self.embeddings(
-                            torch.tensor(self.word2idx["<PAD>"], device=self.device)
-                        ),
-                        self.embeddings(
-                            torch.tensor(self.word2idx["<PAD>"], device=self.device)
-                        ),
-                        self.embeddings(
-                            torch.tensor(self.word2idx["<PAD>"], device=self.device)
-                        ),
-                    ]
-                )
-                return final_embedding
+            return self.embeddings(
+                torch.tensor(self.word2idx["<PAD>"], device=self.device)
+            )
 
         head_embedding = self.embeddings(
             torch.tensor(self.word2idx[obs[0]], device=self.device)
@@ -233,31 +116,18 @@ class LSTM(torch.nn.Module):
         tail_embedding = self.embeddings(
             torch.tensor(self.word2idx[obs[2]], device=self.device)
         )
-        if self.fuse_information == "concat":
-            final_embedding = torch.concat(
-                [head_embedding, relation_embedding, tail_embedding]
-            )
-        elif self.fuse_information == "sum":
-            final_embedding = head_embedding + relation_embedding + tail_embedding
-        else:
-            raise ValueError(
-                f"fuse_information should be one of 'concat' or 'sum', but "
-                f"{self.fuse_information} was given!"
-            )
-
-        if self.include_positional_encoding:
-            final_embedding += self.positional_encoding[obs[3]]
+        final_embedding = head_embedding + relation_embedding + tail_embedding
 
         return final_embedding
 
-    def forward(self, x: np.ndarray) -> torch.Tensor:
+    def forward(self, x: np.ndarray, memory_types: None = None) -> torch.Tensor:
         """Forward pass.
 
         Args:
             x: Input.
 
         Returns:
-            q: Q-values.
+            lstm_out: LSTM last hidden state.
 
         """
         obs_pad = ["<PAD>", "<PAD>", "<PAD>", "<PAD>"]
@@ -285,12 +155,68 @@ class LSTM(torch.nn.Module):
         lstm_out, _ = self.lstm(batch_embeddings)
         lstm_out = lstm_out[:, -1, :]
 
-        if self.dueling_dqn:
-            value = self.value_layer(lstm_out)
-            advantage = self.advantage_layer(lstm_out)
-            q = value + advantage - advantage.mean(dim=-1, keepdim=True)
-        else:
-            q = self.advantage_layer(lstm_out)
+        return lstm_out
+
+
+class MLP(torch.nn.Module):
+    """Multi-layer perceptron with ReLU activation functions."""
+
+    def __init__(self, n_actions: int, hidden_size: int, device: str) -> None:
+        """Initialize the MLP.
+
+        Args:
+            n_actions: Number of actions.
+            hidden_size: Hidden size of the linear layer.
+            device: "cpu" or "cuda".
+
+        """
+        super(MLP, self).__init__()
+        self.device = device
+
+        self.hidden_size = hidden_size
+        self.n_actions = n_actions
+
+        self.advantage_layer = torch.nn.Sequential(
+            torch.nn.Linear(
+                self.hidden_size,
+                self.hidden_size,
+                device=self.device,
+            ),
+            torch.nn.ReLU(),
+            torch.nn.Linear(
+                self.hidden_size,
+                self.n_actions,
+                device=self.device,
+            ),
+        )
+
+        self.value_layer = torch.nn.Sequential(
+            torch.nn.Linear(
+                self.hidden_size,
+                self.hidden_size,
+                device=self.device,
+            ),
+            torch.nn.ReLU(),
+            torch.nn.Linear(
+                self.hidden_size,
+                1,
+                device=self.device,
+            ),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass of the neural network.
+
+        Args:
+            x: Input tensor. Shape (batch_size, lstm_hidden_size).
+        Returns:
+            torch.Tensor: Output tensor.
+
+        """
+
+        value = self.value_layer(x)
+        advantage = self.advantage_layer(x)
+        q = value + advantage - advantage.mean(dim=-1, keepdim=True)
 
         return q
 
@@ -405,7 +331,7 @@ class History:
         return action_explore
 
 
-class DQNLSTMBaselineAgent:
+class DQNLSTMMLPBaselineAgent:
     """DQN LSTM Baseline Agent interacting with environment.
 
     Based on https://github.com/Curt-Park/rainbow-is-all-you-need/
@@ -424,16 +350,12 @@ class DQNLSTMBaselineAgent:
         min_epsilon: float = 0.1,
         gamma: float = 0.9,
         history_block_size: int = 6,
-        nn_params: dict = {
+        lstm_params: dict = {
             "hidden_size": 64,
             "num_layers": 2,
             "embedding_dim": 64,
-            "fuse_information": "sum",
-            "include_positional_encoding": True,
-            "max_timesteps": 100,
-            "max_strength": 100,
         },
-        run_test: bool = True,
+        mlp_params: dict = {"hidden_size": 64},
         num_samples_for_results: int = 10,
         plotting_interval: int = 10,
         train_seed: int = 5,
@@ -450,8 +372,6 @@ class DQNLSTMBaselineAgent:
             "question_interval": 1,
             "include_walls_in_observations": True,
         },
-        ddqn: bool = True,
-        dueling_dqn: bool = True,
         default_root_dir: str = "./training-results/stochastic-objects/DQN/baselines/",
         run_handcrafted_baselines: bool = True,
     ) -> None:
@@ -469,16 +389,14 @@ class DQNLSTMBaselineAgent:
             min_epsilon: Minimum epsilon.
             gamma: discount factor.
             history_block_size: History block size.
-            nn_params: Neural network parameters.
-            run_test: Whether to run test.
+            lstm_params: LSTM parameters.
+            mlp_params: MLP parameters.
             num_samples_for_results: Number of samples to use for results.
             plotting_interval: Plotting interval.
             train_seed: Train seed.
             test_seed: Test seed.
             device: "cpu" or "cuda".
             env_config: Environment configuration.
-            ddqn: Whether to use DDQN.
-            dueling_dqn: Whether to use dueling DQN.
             default_root_dir: Default root directory to save training results
             run_handcrafted_baselines: Whether to run handcrafted baselines.
 
@@ -506,26 +424,14 @@ class DQNLSTMBaselineAgent:
         self.device = torch.device(device)
         print(f"Running on {self.device}")
 
-        self.ddqn = ddqn
-        self.dueling_dqn = dueling_dqn
-
         self.action2str = {0: "north", 1: "east", 2: "south", 3: "west", 4: "stay"}
         self.str2action = {v: k for k, v in self.action2str.items()}
         self.action_space = gym.spaces.Discrete(len(self.action2str))
 
-        self.nn_params = nn_params
-        self.nn_params["device"] = self.device
-        self.nn_params["entities"] = self.env.unwrapped.entities
-        self.nn_params["relations"] = self.env.unwrapped.relations
-        self.nn_params["dueling_dqn"] = self.dueling_dqn
-        self.nn_params["n_actions"] = len(self.action2str)
-        self.nn_params["max_step_reward"] = self.env.unwrapped.num_questions_step
-
-        self.val_filenames = []
+        self.val_dir_names = []
         self.is_notebook = is_running_notebook()
         self.num_iterations = num_iterations
         self.plotting_interval = plotting_interval
-        self.run_test = run_test
 
         self.replay_buffer_size = replay_buffer_size
         self.batch_size = batch_size
@@ -538,17 +444,34 @@ class DQNLSTMBaselineAgent:
         self.warm_start = warm_start
         assert self.batch_size <= self.warm_start <= self.replay_buffer_size
 
-        self.dqn = LSTM(**self.nn_params)
-        self.dqn_target = LSTM(**self.nn_params)
-        self.dqn_target.load_state_dict(self.dqn.state_dict())
-        self.dqn_target.eval()
+        self.lstm_params = lstm_params
+        self.lstm_params["device"] = self.device
+        self.lstm_params["entities"] = self.env.unwrapped.entities
+        self.lstm_params["relations"] = self.env.unwrapped.relations
+
+        self.lstm = LSTM(**self.lstm_params)
+        self.lstm_target = LSTM(**self.lstm_params)
+        self.lstm_target.load_state_dict(self.lstm.state_dict())
+        self.lstm_target.eval()
+
+        self.mlp_params = mlp_params
+        self.mlp_params["device"] = self.device
+
+        self.mlp = MLP(n_actions=len(self.action2str), **self.mlp_params)
+        self.mlp_target = MLP(n_actions=len(self.action2str), **self.mlp_params)
+        self.mlp_target.load_state_dict(self.mlp.state_dict())
+        self.mlp_target.eval()
+
+        self._save_number_of_parameters()
 
         self.replay_buffer = ReplayBuffer(
             observation_type="dict", size=replay_buffer_size, batch_size=batch_size
         )
 
         # optimizer
-        self.optimizer = optim.Adam(self.dqn.parameters())
+        self.optimizer = optim.Adam(
+            list(self.lstm.parameters()) + list(self.mlp.parameters())
+        )
 
         self.q_values = {"train": [], "val": [], "test": []}
 
@@ -618,6 +541,16 @@ class DQNLSTMBaselineAgent:
         os.makedirs(self.default_root_dir, exist_ok=True)
         write_yaml(params_to_save, os.path.join(self.default_root_dir, "train.yaml"))
 
+    def _save_number_of_parameters(self) -> None:
+        """Save the number of parameters in the model."""
+        write_yaml(
+            {
+                "lstm": sum(p.numel() for p in self.lstm.parameters()),
+                "mlp": sum(p.numel() for p in self.mlp.parameters()),
+            },
+            os.path.join(self.default_root_dir, "num_params.yaml"),
+        )
+
     def remove_results_from_disk(self) -> None:
         """Remove the results from the disk."""
         shutil.rmtree(self.default_root_dir)
@@ -645,9 +578,11 @@ class DQNLSTMBaselineAgent:
         """
         # select explore action
         action_explore, q_values = select_action(
+            memory_types=None,
             state=state,
             greedy=greedy,
-            dqn=self.dqn,
+            lstm=self.lstm,
+            mlp=self.mlp,
             epsilon=self.epsilon,
             action_space=self.action_space,
         )
@@ -701,7 +636,8 @@ class DQNLSTMBaselineAgent:
         self.training_loss = []
         self.scores = {"train": [], "val": [], "test": None}
 
-        self.dqn.train()
+        self.lstm.train()
+        self.mlp.train()
 
         new_episode_starts = True
         score = 0
@@ -738,12 +674,15 @@ class DQNLSTMBaselineAgent:
 
             if not new_episode_starts:
                 loss = update_model(
+                    memory_types=None,
                     replay_buffer=self.replay_buffer,
                     optimizer=self.optimizer,
                     device=self.device,
-                    dqn=self.dqn,
-                    dqn_target=self.dqn_target,
-                    ddqn=self.ddqn,
+                    lstm=self.lstm,
+                    lstm_target=self.lstm_target,
+                    mlp=self.mlp,
+                    mlp_target=self.mlp_target,
+                    ddqn=True,
                     gamma=self.gamma,
                 )
 
@@ -760,7 +699,8 @@ class DQNLSTMBaselineAgent:
 
                 # if hard update is needed
                 if self.iteration_idx % self.target_update_interval == 0:
-                    target_hard_update(self.dqn, self.dqn_target)
+                    target_hard_update(self.lstm, self.lstm_target)
+                    target_hard_update(self.mlp, self.mlp_target)
 
                 # plotting & show training results
                 if (
@@ -830,25 +770,38 @@ class DQNLSTMBaselineAgent:
 
     def validate(self) -> None:
         """Validate the agent."""
-        self.dqn.eval()
+        self.lstm.eval()
+        self.mlp.eval()
         scores_temp, states, q_values, actions = self.validate_test_middle("val")
 
         save_validation(
+            policy=None,
             scores_temp=scores_temp,
             scores=self.scores,
             default_root_dir=self.default_root_dir,
             num_validation=self.num_validation,
-            val_filenames=self.val_filenames,
-            dqn=self.dqn,
+            val_dir_names=self.val_dir_names,
+            lstm=self.lstm,
+            mlp=self.mlp,
         )
         save_states_q_values_actions(
-            states, q_values, actions, self.default_root_dir, "val", self.num_validation
+            None,
+            states,
+            q_values,
+            actions,
+            self.default_root_dir,
+            "val",
+            self.num_validation,
         )
         self.env.close()
         self.num_validation += 1
-        self.dqn.train()
 
-    def test(self, checkpoint: str = None) -> None:
+        self.lstm.train()
+        self.mlp.train()
+
+    def test(
+        self, checkpoint_lstm: str | None = None, checkpoint_mlp: str | None = None
+    ) -> None:
         """Test the agent.
 
         Args:
@@ -856,28 +809,45 @@ class DQNLSTMBaselineAgent:
                 is loaded.
 
         """
-        self.dqn.eval()
+        self.lstm.eval()
+        self.mlp.eval()
         self.env_config["seed"] = self.test_seed
         self.env = gym.make(self.env_str, **self.env_config)
 
-        assert len(self.val_filenames) == 1
-        self.dqn.load_state_dict(torch.load(self.val_filenames[0]))
-        if checkpoint is not None:
-            self.dqn.load_state_dict(torch.load(checkpoint))
+        assert len(self.val_dir_names) == 1
+
+        self.lstm.load_state_dict(
+            torch.load(os.path.join(self.val_dir_names[0], "lstm.pt"))
+        )
+        self.mlp.load_state_dict(
+            torch.load(os.path.join(self.val_dir_names[0], "mlp.pt"))
+        )
+
+        if checkpoint_lstm is not None:
+            self.lstm.load_state_dict(torch.load(checkpoint_lstm))
+        if checkpoint_mlp is not None:
+            self.mlp.load_state_dict(torch.load(checkpoint_mlp))
 
         scores, states, q_values, actions = self.validate_test_middle("test")
         self.scores["test"] = scores
 
         save_final_results(
-            self.scores, self.training_loss, self.default_root_dir, self.q_values, self
+            self.scores,
+            self.training_loss,
+            self.default_root_dir,
+            self.q_values,
+            self,
+            None,
         )
         save_states_q_values_actions(
-            states, q_values, actions, self.default_root_dir, "test"
+            None, states, q_values, actions, self.default_root_dir, "test"
         )
 
         self.plot_results("all", save_fig=True)
         self.env.close()
-        self.dqn.train()
+
+        self.lstm.train()
+        self.mlp.train()
 
     def plot_results(self, to_plot: str = "all", save_fig: bool = False) -> None:
         """Plot things for DQN training.
@@ -895,6 +865,7 @@ class DQNLSTMBaselineAgent:
 
         """
         plot_results(
+            None,
             self.scores,
             self.training_loss,
             self.epsilons,

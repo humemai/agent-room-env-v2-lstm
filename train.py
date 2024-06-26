@@ -9,7 +9,7 @@ logger.disabled = True
 
 from humemai.utils import read_yaml
 
-from agent.dqn import DQNExploreAgent, DQNLSTMBaselineAgent, DQNMMAgent
+from agent.dqn import DQNExploreAgent, DQNLSTMMLPBaselineAgent, DQNMMAgent
 
 parser = argparse.ArgumentParser(description="train")
 parser.add_argument(
@@ -26,5 +26,5 @@ for k, v in hparams.items():
     print(f"  {k:>21} : {v}")
 
 
-agent = DQNLSTMBaselineAgent(**hparams)
+agent = DQNLSTMMLPBaselineAgent(**hparams)
 agent.train()

@@ -39,10 +39,10 @@ class HandcraftedAgentTest(unittest.TestCase):
 
             results = {}
             for mm_policy in ["random", "generalize"]:
-                for qa_policy in ["random", "episodic_semantic"]:
+                for qa_function in ["random", "episodic_semantic"]:
                     for explore_policy in ["random", "avoid_walls"]:
                         for pretrain_semantic in [False, "include_walls"]:
-                            key = (mm_policy, qa_policy, explore_policy)
+                            key = (mm_policy, qa_function, explore_policy)
                             if key not in results:
                                 results[key] = []
 
@@ -53,7 +53,7 @@ class HandcraftedAgentTest(unittest.TestCase):
                                     env_str="room_env:RoomEnv-v2",
                                     env_config=config,
                                     mm_policy=mm_policy,
-                                    qa_policy=qa_policy,
+                                    qa_function=qa_function,
                                     explore_policy=explore_policy,
                                     num_samples_for_results=3,
                                     capacity=capacity,

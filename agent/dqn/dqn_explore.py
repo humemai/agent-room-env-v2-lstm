@@ -69,7 +69,7 @@ class DQNExploreAgent(DQNAgent):
         mm_agent_path: (
             str | None
         ) = "trained-agents/mm/2023-12-28 18:13:03.001952/agent.pkl",
-        qa_policy: str = "episodic_semantic",
+        qa_function: str = "episodic_semantic",
         env_config: dict = {
             "question_prob": 1.0,
             "terminates_at": 99,
@@ -111,8 +111,8 @@ class DQNExploreAgent(DQNAgent):
             mm_policy: memory management policy. Choose one of "generalize", "random",
                 "rl", or "neural"
             mm_agent_path: memory management agent path
-            qa_policy: question answering policy Choose one of "episodic_semantic",
-                "random", or "neural". qa_policy shouldn't be trained with RL. There is
+            qa_function: question answering policy Choose one of "episodic_semantic",
+                "random", or "neural". qa_function shouldn't be trained with RL. There is
                 no sequence of states / actions to learn from.
             env_config: The configuration of the environment.
                 question_prob: The probability of a question being asked at every
@@ -233,7 +233,7 @@ class DQNExploreAgent(DQNAgent):
                 actions_qa = [
                     answer_question(
                         self.memory_systems,
-                        self.qa_policy,
+                        self.qa_function,
                         question,
                         split_possessive=False,
                     )
@@ -290,7 +290,7 @@ class DQNExploreAgent(DQNAgent):
         actions_qa = [
             answer_question(
                 self.memory_systems,
-                self.qa_policy,
+                self.qa_function,
                 question,
                 split_possessive=False,
             )

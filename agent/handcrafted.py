@@ -3,17 +3,14 @@
 import datetime
 import os
 import shutil
+from typing import Literal
 from copy import deepcopy
 
 import gymnasium as gym
 import numpy as np
-from humemai.memory import (EpisodicMemory, MemorySystems, SemanticMemory,
-                            ShortMemory)
-from humemai.policy import (answer_question, encode_observation, explore,
-                            manage_memory)
+from humemai.memory import EpisodicMemory, MemorySystems, SemanticMemory, ShortMemory
+from humemai.policy import answer_question, encode_observation, explore, manage_memory
 from humemai.utils import write_yaml
-from IPython.display import clear_output
-from tqdm.auto import tqdm, trange
 
 
 class HandcraftedAgent:
@@ -38,16 +35,20 @@ class HandcraftedAgent:
             "question_interval": 1,
             "room_size": "xxs",
         },
-        mm_policy: str = "generalize",
-        qa_policy: str = "episodic_semantic",
-        explore_policy: str = "avoid_walls",
+        mm_policy: Literal[
+            "random", "episodic", "semantic", "generalize"
+        ] = "generalize",
+        qa_function: Literal[
+            "episodic_semantic", "episodic", "semantic", "random"
+        ] = "episodic_semantic",
+        explore_policy: Literal["random", "avoid_walls"] = "avoid_walls",
         num_samples_for_results: int = 10,
         capacity: dict = {
             "episodic": 16,
             "semantic": 16,
             "short": 1,
         },
-        pretrain_semantic: str | bool = False,
+        pretrain_semantic: Literal[False, "include_walls", "exclude_walls"] = False,
         default_root_dir: str = "./training-results/",
     ) -> None:
         """Initialize the agent.
@@ -55,12 +56,12 @@ class HandcraftedAgent:
         Args:
             env_str: This has to be "room_env:RoomEnv-v2"
             env_config: The configuration of the environment.
-            mm_policy: Memory management policy. Choose one of "random" or
-                "generalize"
-            qa_policy: question answering policy Choose one of "episodic_semantic" or
-                "random"
+            mm_policy: memory management policy. Choose one of "random", "episodic",
+                "semantic", or "generalize"
+            qa_function: The question answering policy. Choose one of "episodic_semantic",
+                "episodic", "semantic", or "random"
             explore_policy: The room exploration policy. Choose one of "random",
-                "avoid_walls", or "new_room"
+                or "avoid_walls"
             num_samples_for_results: The number of samples to validate / test the agent.
             capacity: The capacity of each human-like memory systems.
             pretrain_semantic: Whether or not to pretrain the semantic memory system.
@@ -78,24 +79,18 @@ class HandcraftedAgent:
             "episodic",
             "semantic",
             "generalize",
-            "rl",
-            "neural",
         ]
-        self.qa_policy = qa_policy
-        assert self.qa_policy in [
+        self.qa_function = qa_function
+        assert self.qa_function in [
             "episodic_semantic",
             "episodic",
             "semantic",
             "random",
-            "neural",
         ]
         self.explore_policy = explore_policy
         assert self.explore_policy in [
             "random",
             "avoid_walls",
-            "new_room",
-            "rl",
-            "neural",
         ]
         self.num_samples_for_results = num_samples_for_results
         self.capacity = capacity
@@ -114,58 +109,6 @@ class HandcraftedAgent:
     def remove_results_from_disk(self) -> None:
         """Remove the results from the disk."""
         shutil.rmtree(self.default_root_dir)
-
-    def manage_agent_and_map_memory(
-        self, observations: list[list[str]]
-    ) -> list[list[str]]:
-        """Manage episodic_agent and semantic_map memories.
-
-        Args:
-            observations: The observations["room"] from the environment.
-
-        Returns:
-            observations_others: The observations["room"] - (episodic_agent and
-                semantic_map memories) from the environment.
-
-        """
-        if hasattr(self.memory_systems, "episodic_agent"):
-            observations_agent = [obs for obs in observations if obs[0] == "agent"]
-            for obs in observations_agent:
-                encode_observation(self.memory_systems, obs)
-                manage_memory(
-                    self.memory_systems, "episodic_agent", split_possessive=False
-                )
-
-        else:
-            observations_agent = []
-
-        if hasattr(self.memory_systems, "semantic_map"):
-            observations_map = [
-                obs
-                for obs in observations
-                if obs[1] in ["north", "east", "south", "west"] and obs[2] != "wall"
-            ]
-
-            for obs in observations_map:
-                encode_observation(self.memory_systems, obs)
-                manage_memory(
-                    self.memory_systems, "semantic_map", split_possessive=True
-                )
-
-        else:
-            observations_map = []
-
-        observations_others = [
-            obs
-            for obs in observations
-            if obs not in observations_map and obs not in observations_agent
-        ]
-
-        assert len(observations_agent) + len(observations_map) + len(
-            observations_others
-        ) == len(observations)
-
-        return observations_others
 
     def test(self):
         """Test the agent. There is no training for this agent, since it is
@@ -196,9 +139,6 @@ class HandcraftedAgent:
                     observations, info = self.env.reset()
                     env_started = True
 
-                observations["room"] = self.manage_agent_and_map_memory(
-                    observations["room"]
-                )
                 for obs in observations["room"]:
                     encode_observation(self.memory_systems, obs)
                     manage_memory(
@@ -211,7 +151,7 @@ class HandcraftedAgent:
                     str(
                         answer_question(
                             self.memory_systems,
-                            self.qa_policy,
+                            self.qa_function,
                             question,
                             split_possessive=False,
                         )
@@ -242,11 +182,7 @@ class HandcraftedAgent:
             episodic=EpisodicMemory(
                 capacity=self.capacity["episodic"], remove_duplicates=False
             ),
-            episodic_agent=EpisodicMemory(
-                capacity=self.capacity["episodic_agent"], remove_duplicates=False
-            ),
             semantic=SemanticMemory(capacity=self.capacity["semantic"]),
-            semantic_map=SemanticMemory(capacity=self.capacity["semantic_map"]),
             short=ShortMemory(capacity=self.capacity["short"]),
         )
 

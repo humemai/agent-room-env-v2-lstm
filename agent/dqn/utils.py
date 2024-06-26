@@ -6,6 +6,7 @@ import os
 import random
 from collections import deque
 from typing import Callable, Deque, Literal
+import shutil
 
 import gymnasium as gym
 import matplotlib.pyplot as plt
@@ -105,6 +106,7 @@ class ReplayBuffer:
 
 
 def plot_results(
+    policy: Literal["mm", "explore"],
     scores: dict,
     training_loss: list,
     epsilons: list,
@@ -183,7 +185,7 @@ def plot_results(
                 label=f"action {action_number}",
             )
         plt.legend(loc="upper left")
-        plt.xlabel("number of actions")
+        plt.xlabel("number of actions taken")
 
         plt.subplot(235)
         plt.title("Q-values, val")
@@ -193,7 +195,7 @@ def plot_results(
                 label=f"action {action_number}",
             )
         plt.legend(loc="upper left")
-        plt.xlabel("number of actions")
+        plt.xlabel("number of actions taken")
 
         plt.subplot(236)
         plt.title("Q-values, test")
@@ -203,11 +205,16 @@ def plot_results(
                 label=f"action {action_number}",
             )
         plt.legend(loc="upper left")
-        plt.xlabel("number of actions")
+        plt.xlabel("number of actions taken")
 
         plt.subplots_adjust(hspace=0.5)
         if save_fig:
-            plt.savefig(os.path.join(default_root_dir, "plot.pdf"))
+
+            subdir = ""
+            if policy is not None:
+                subdir = policy
+
+            plt.savefig(os.path.join(default_root_dir, subdir, "plot.pdf"))
 
         if is_notebook:
             plt.show()
@@ -266,7 +273,7 @@ def plot_results(
                 label=f"action {action_number}",
             )
         plt.legend(loc="upper left")
-        plt.xlabel("number of actions")
+        plt.xlabel("number of actions taken")
 
     elif to_plot == "q_values_val":
         plt.figure()
@@ -277,7 +284,7 @@ def plot_results(
                 label=f"action {action_number}",
             )
         plt.legend(loc="upper left")
-        plt.xlabel("number of actions")
+        plt.xlabel("number of actions taken")
 
     elif to_plot == "q_values_test":
         plt.figure()
@@ -288,7 +295,7 @@ def plot_results(
                 label=f"action {action_number}",
             )
         plt.legend(loc="upper left")
-        plt.xlabel("number of actions")
+        plt.xlabel("number of actions taken")
     else:
         raise ValueError(f"to_plot={to_plot} is not valid.")
 
@@ -331,8 +338,19 @@ def save_final_results(
     default_root_dir: str,
     q_values: dict,
     self: object,
+    policy: Literal["mm", "explore", None],
 ) -> None:
-    """Save dqn train / val / test results."""
+    """Save dqn train / val / test results.
+
+    Args:
+        scores: a dictionary of scores for train, validation, and test.
+        training_loss: a list of training loss values.
+        default_root_dir: the root directory where the results are saved.
+        q_values: a dictionary of q_values for train, validation, and test.
+        self: the agent object.
+        policy: "mm" or "explore"
+
+    """
     results = {
         "train_score": scores["train"],
         "validation_score": [
@@ -348,22 +366,28 @@ def save_final_results(
         },
         "training_loss": training_loss,
     }
-    write_yaml(results, os.path.join(default_root_dir, "results.yaml"))
-    write_yaml(q_values, os.path.join(default_root_dir, "q_values.yaml"))
-    write_pickle(self, os.path.join(default_root_dir, "agent.pkl"))
+    subdir = policy if policy is not None else ""
+
+    write_yaml(results, os.path.join(default_root_dir, subdir, "results.yaml"))
+    write_yaml(q_values, os.path.join(default_root_dir, subdir, "q_values.yaml"))
+    # write_pickle(self, os.path.join(default_root_dir, "agent.pkl"))
 
 
 def compute_loss(
+    memory_types: list[str],
     samples: dict[str, np.ndarray],
     device: str,
-    dqn: torch.nn.Module,
-    dqn_target: torch.nn.Module,
+    lstm: torch.nn.Module,
+    lstm_target: torch.nn.Module,
+    mlp: torch.nn.Module,
+    mlp_target: torch.nn.Module,
     ddqn: str,
     gamma: float,
 ) -> torch.Tensor:
     """Return td loss.
 
     Args:
+        memory_types: memory_types
         samples: A dictionary of samples from the replay buffer.
             obs: np.ndarray,
             act: np.ndarray,
@@ -371,8 +395,10 @@ def compute_loss(
             next_obs: np.ndarray,
             done: bool,
         device: cpu or cuda
-        dqn: dqn model
-        dqn_target: dqn target model
+        lstm: lstm model
+        lstm_target: lstm target model
+        mlp: mlp model
+        mlp_target: mlp target model
         ddqn: whether to use double dqn or not
         gamma: discount factor
 
@@ -388,15 +414,19 @@ def compute_loss(
 
     # G_t   = r + gamma * v(s_{t+1})  if state != Terminal
     #       = r                       otherwise
-    curr_q_value = dqn(state).gather(1, action)
+    curr_q_value = mlp(lstm(state, memory_types)).gather(1, action)
     if ddqn:
         next_q_value = (
-            dqn_target(next_state)
-            .gather(1, dqn(next_state).argmax(dim=1, keepdim=True))
+            mlp_target(lstm_target(next_state, memory_types))
+            .gather(1, mlp(lstm(next_state, memory_types)).argmax(dim=1, keepdim=True))
             .detach()
         )
     else:
-        next_q_value = dqn_target(next_state).max(dim=1, keepdim=True)[0].detach()
+        next_q_value = (
+            mlp_target(lstm_target(next_state, memory_types))
+            .max(dim=1, keepdim=True)[0]
+            .detach()
+        )
     mask = 1 - done
     target = (reward + gamma * next_q_value * mask).to(device)
 
@@ -407,26 +437,32 @@ def compute_loss(
 
 
 def select_action(
+    memory_types: list[str] | None,
     state: dict,
     greedy: bool,
-    dqn: torch.nn.Module,
+    lstm: torch.nn.Module,
+    mlp: torch.nn.Module,
     epsilon: float,
     action_space: gym.spaces.Discrete,
 ) -> tuple[int, list]:
     """Select an action from the input state, with epsilon-greedy policy.
 
     Args:
+        memory_types: memory_types
         state: The current state of the memory systems. This is NOT what the gym env
-        gives you. This is made by the agent.
+            gives you. This is made by the agent.
         greedy: always pick greedy action if True
-        save_q_value: whether to save the q values or not.
+        lstm: lstm model
+        mlp: mlp model, which is the dqn model
+        epsilon: epsilon value
+        action_space: gym action space
 
     Returns:
         selected_action: an action to take.
         q_values: a list of q values for each action.
 
     """
-    q_values = dqn(np.array([state])).detach().cpu().tolist()[0]
+    q_values = mlp(lstm(np.array([state]), memory_types)).detach().cpu().tolist()[0]
 
     if greedy or epsilon < np.random.random():
         selected_action = argmax(q_values)
@@ -437,22 +473,28 @@ def select_action(
 
 
 def update_model(
+    memory_types: list[str],
     replay_buffer: ReplayBuffer,
     optimizer: torch.optim.Adam,
     device: str,
-    dqn: torch.nn.Module,
-    dqn_target: torch.nn.Module,
+    lstm: torch.nn.Module,
+    lstm_target: torch.nn.Module,
+    mlp: torch.nn.Module,
+    mlp_target: torch.nn.Module,
     ddqn: str,
     gamma: float,
 ) -> torch.Tensor:
     """Update the model by gradient descent.
 
     Args:
+        memory_types: memory_types
         replay_buffer: replay buffer
         optimizer: optimizer
         device: cpu or cuda
-        dqn: dqn model
-        dqn_target: dqn target model
+        lstm: lstm model
+        lstm_target: lstm target model
+        mlp: mlp model
+        mlp_target: mlp target model
         ddqn: whether to use double dqn or not
         gamma: discount factor
 
@@ -461,7 +503,9 @@ def update_model(
     """
     samples = replay_buffer.sample_batch()
 
-    loss = compute_loss(samples, device, dqn, dqn_target, ddqn, gamma)
+    loss = compute_loss(
+        memory_types, samples, device, lstm, lstm_target, mlp, mlp_target, ddqn, gamma
+    )
 
     optimizer.zero_grad()
     loss.backward()
@@ -471,54 +515,63 @@ def update_model(
 
 
 def save_validation(
+    policy: Literal["mm", "explore", None],
     scores_temp: list,
     scores: dict,
     default_root_dir: str,
     num_validation: int,
-    val_filenames: list,
-    dqn: torch.nn.Module,
-    if_duplicate_take_first: bool = False,
+    val_dir_names: list,
+    lstm: torch.nn.Module,
+    mlp: torch.nn.Module,
 ) -> None:
     """Keep the best validation model.
 
     Args:
+        policy: "mm", "explore", or None.
         scores_temp: a list of validation scores for the current validation episode.
         scores: a dictionary of scores for train, validation, and test.
         default_root_dir: the root directory where the results are saved.
         num_validation: the current validation episode.
-        val_filenames: a list of filenames for the validation models.
-        dqn: the dqn model.
-        if_duplicate_take_first: if True, take the first duplicate model. This will take
-            the higher training loss model. If False, take the last duplicate model.
-            This will take the lower training loss model.
+        val_dir_names: a list of dirnames for the validation models.
+        lstm: the lstm model.
+        mlp: the mlp model.
+
     """
     mean_score = round(np.mean(scores_temp).item())
-    filename = os.path.join(
-        default_root_dir, f"episode={num_validation}_val-score={mean_score}.pt"
-    )
-    torch.save(dqn.state_dict(), filename)
 
-    val_filenames.append(filename)
+    subdir = "checkpoint"
+    if policy is not None:
+        subdir = os.path.join(policy, subdir)
+
+    dir_name = os.path.join(
+        default_root_dir,
+        subdir,
+        f"episode={num_validation}_val-score={mean_score}",
+    )
+
+    os.makedirs(dir_name, exist_ok=True)
+    torch.save(lstm.state_dict(), os.path.join(dir_name, "lstm.pt"))
+    torch.save(mlp.state_dict(), os.path.join(dir_name, "mlp.pt"))
+
+    val_dir_names.append(dir_name)
     scores["val"].append(scores_temp)
 
     scores_to_compare = []
-    for filename in val_filenames:
-        score = int(filename.split("val-score=")[-1].split(".pt")[0].split("/")[-1])
+    for dir_name in val_dir_names:
+        score = int(dir_name.split("val-score=")[-1].split(".pt")[0].split("/")[-1])
         scores_to_compare.append(score)
 
     indexes = list_duplicates_of(scores_to_compare, max(scores_to_compare))
-    if if_duplicate_take_first:
-        file_to_keep = val_filenames[indexes[0]]
-    else:
-        file_to_keep = val_filenames[indexes[-1]]
+    dir_to_keep = val_dir_names[indexes[-1]]
 
-    for filename in val_filenames:
-        if filename != file_to_keep:
-            os.remove(filename)
-            val_filenames.remove(filename)
+    for dir_name in val_dir_names:
+        if dir_name != dir_to_keep:
+            shutil.rmtree(dir_name, ignore_errors=True)
+            val_dir_names.remove(dir_name)
 
 
 def save_states_q_values_actions(
+    policy: Literal["mm", "explore", None],
     states: list,
     q_values: list,
     actions: list,
@@ -529,6 +582,7 @@ def save_states_q_values_actions(
     """Save states, q_values, and actions.
 
     Args:
+        policy: "mm", "explore", or None.
         states: a list of states.
         q_values: a list of q_values.
         actions: a list of actions.
@@ -537,13 +591,15 @@ def save_states_q_values_actions(
         num_validation: the current validation episode.
 
     """
-    if val_or_test.lower() == "val":
-        filename = os.path.join(
-            default_root_dir,
-            f"states_q_values_actions_val_episode={num_validation}.yaml",
-        )
-    else:
-        filename = os.path.join(default_root_dir, "states_q_values_actions_test.yaml")
+
+    subdir = policy if policy is not None else ""
+    filename_template = (
+        f"states_q_values_actions_val_episode={num_validation}.yaml"
+        if val_or_test.lower() == "val"
+        else "states_q_values_actions_test.yaml"
+    )
+
+    filename = os.path.join(default_root_dir, subdir, filename_template)
 
     assert len(states) == len(q_values) == len(actions)
     to_save = [

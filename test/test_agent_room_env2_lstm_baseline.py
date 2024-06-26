@@ -14,16 +14,16 @@ import gymnasium as gym
 import numpy as np
 from tqdm.auto import tqdm
 
-from agent import DQNLSTMBaselineAgent
+from agent import DQNLSTMMLPBaselineAgent
 
 
-class DQNLSTMBaselineAgentTest(unittest.TestCase):
+class DQNLSTMMLPBaselineAgentTest(unittest.TestCase):
     def test_agent(self) -> None:
         hparams = {
             "env_str": "room_env:RoomEnv-v2",
             "num_iterations": 10,
             "replay_buffer_size": 10,
-            "warm_start": 10,
+            "warm_start": 5,
             "batch_size": 2,
             "target_update_interval": 10,
             "epsilon_decay_until": 10,
@@ -31,17 +31,13 @@ class DQNLSTMBaselineAgentTest(unittest.TestCase):
             "min_epsilon": 0.1,
             "gamma": 0.9,
             "history_block_size": 2,
-            "nn_params": {
-                "hidden_size": 4,
-                "num_layers": 2,
-                "embedding_dim": 4,
-                "fuse_information": "sum",
-                "include_positional_encoding": True,
-                "max_timesteps": 100,
-                "max_strength": 100,
+            "lstm_params": {
+                "hidden_size": 2,
+                "num_layers": 1,
+                "embedding_dim": 2,
             },
-            "run_test": True,
-            "num_samples_for_results": 10,
+            "mlp_params": {"hidden_size": 2},
+            "num_samples_for_results": 3,
             "plotting_interval": 10,
             "train_seed": 6,
             "test_seed": 1,
@@ -57,12 +53,10 @@ class DQNLSTMBaselineAgentTest(unittest.TestCase):
                 "question_interval": 1,
                 "include_walls_in_observations": True,
             },
-            "ddqn": True,
-            "dueling_dqn": True,
             "default_root_dir": "./training-results/",
             "run_handcrafted_baselines": True,
         }
 
-        agent = DQNLSTMBaselineAgent(**hparams)
+        agent = DQNLSTMMLPBaselineAgent(**hparams)
         agent.train()
         agent.remove_results_from_disk()

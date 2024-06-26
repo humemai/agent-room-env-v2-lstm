@@ -62,7 +62,7 @@ class PPOAgent(HandcraftedAgent):
         test_seed: int = 0,
         device: str = "cpu",
         mm_policy: str = "generalize",
-        qa_policy: str = "episodic_semantic",
+        qa_function: str = "episodic_semantic",
         explore_policy: str = "avoid_walls",
         env_config: dict = {
             "question_prob": 1.0,
@@ -100,8 +100,8 @@ class PPOAgent(HandcraftedAgent):
             device: This is either "cpu" or "cuda".
             mm_policy: memory management policy. Choose one of "generalize", "random",
                 "rl", or "neural"
-            qa_policy: question answering policy Choose one of "episodic_semantic",
-                "random", or "neural". qa_policy shouldn't be trained with RL. There is
+            qa_function: question answering policy Choose one of "episodic_semantic",
+                "random", or "neural". qa_function shouldn't be trained with RL. There is
                 no sequence of states / actions to learn from.
             explore_policy: The room exploration policy. Choose one of "random",
                 "avoid_walls", "rl", or "neural"
@@ -124,7 +124,7 @@ class PPOAgent(HandcraftedAgent):
             env_str=env_str,
             env_config=env_config,
             mm_policy=mm_policy,
-            qa_policy=qa_policy,
+            qa_function=qa_function,
             explore_policy=explore_policy,
             num_samples_for_results=num_samples_for_results,
             capacity=capacity,
@@ -213,7 +213,7 @@ class PPOAgent(HandcraftedAgent):
                     env_str="room_env:RoomEnv-v2",
                     env_config={**self.env_config, "seed": test_seed},
                     mm_policy=policy["mm"],
-                    qa_policy=policy["qa"],
+                    qa_function=policy["qa"],
                     explore_policy=policy["explore"],
                     num_samples_for_results=self.num_samples_for_results,
                     capacity=self.capacity,

@@ -493,7 +493,7 @@ def plot_results(
                 label=f"action {action_number}",
             )
         plt.legend(loc="upper left")
-        plt.xlabel("number of actions")
+        plt.xlabel("number of actions taken")
 
         plt.subplot(335)
         plt.title("Actor probs, val")
@@ -503,7 +503,7 @@ def plot_results(
                 label=f"action {action_number}",
             )
         plt.legend(loc="upper left")
-        plt.xlabel("number of actions")
+        plt.xlabel("number of actions taken")
 
         plt.subplot(336)
         plt.title("Actor probs, test")
@@ -513,22 +513,22 @@ def plot_results(
                 label=f"action {action_number}",
             )
         plt.legend(loc="upper left")
-        plt.xlabel("number of actions")
+        plt.xlabel("number of actions taken")
 
         plt.subplot(337)
         plt.title("Critic values, train")
         plt.plot(critic_values_all["train"])
-        plt.xlabel("number of actions")
+        plt.xlabel("number of actions taken")
 
         plt.subplot(338)
         plt.title("Critic values, val")
         plt.plot(critic_values_all["val"])
-        plt.xlabel("number of actions")
+        plt.xlabel("number of actions taken")
 
         plt.subplot(339)
         plt.title("Critic values, test")
         plt.plot(critic_values_all["test"])
-        plt.xlabel("number of actions")
+        plt.xlabel("number of actions taken")
 
         plt.subplots_adjust(hspace=0.5)
         if save_fig:
@@ -595,7 +595,7 @@ def plot_results(
                 label=f"action {action_number}",
             )
         plt.legend(loc="upper left")
-        plt.xlabel("number of actions")
+        plt.xlabel("number of actions taken")
 
     elif to_plot == "actor_probs_val":
         plt.figure()
@@ -606,7 +606,7 @@ def plot_results(
                 label=f"action {action_number}",
             )
         plt.legend(loc="upper left")
-        plt.xlabel("number of actions")
+        plt.xlabel("number of actions taken")
 
     elif to_plot == "actor_probs_test":
         plt.figure()
@@ -617,25 +617,25 @@ def plot_results(
                 label=f"action {action_number}",
             )
         plt.legend(loc="upper left")
-        plt.xlabel("number of actions")
+        plt.xlabel("number of actions taken")
 
     elif to_plot == "critic_values_train":
         plt.figure()
         plt.title("Critic values, train")
         plt.plot(critic_values_all["train"])
-        plt.xlabel("number of actions")
+        plt.xlabel("number of actions taken")
 
     elif to_plot == "critic_values_val":
         plt.figure()
         plt.title("Critic values, val")
         plt.plot(critic_values_all["val"])
-        plt.xlabel("number of actions")
+        plt.xlabel("number of actions taken")
 
     elif to_plot == "critic_values_test":
         plt.figure()
         plt.title("Critic values, test")
         plt.plot(critic_values_all["test"])
-        plt.xlabel("number of actions")
+        plt.xlabel("number of actions taken")
     else:
         raise ValueError(f"to_plot={to_plot} is not valid.")
 

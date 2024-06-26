@@ -65,7 +65,7 @@ class PPOExploreAgent(PPOAgent):
         mm_agent_path: (
             str | None
         ) = "trained-agents/PPO/mm/2024-03-03 03:18:10.587529/agent.pkl",
-        qa_policy: str = "episodic_semantic",
+        qa_function: str = "episodic_semantic",
         env_config: dict = {
             "question_prob": 1.0,
             "terminates_at": 99,
@@ -104,8 +104,8 @@ class PPOExploreAgent(PPOAgent):
             mm_policy: memory management policy. Choose one of "generalize", "random",
                 "rl", or "neural"
             mm_agent_path: The memory management agent path.
-            qa_policy: question answering policy Choose one of "episodic_semantic",
-                "random", or "neural". qa_policy shouldn't be trained with RL. There is
+            qa_function: question answering policy Choose one of "episodic_semantic",
+                "random", or "neural". qa_function shouldn't be trained with RL. There is
                 no sequence of states / actions to learn from.
             env_config: The configuration of the environment.
                 question_prob: The probability of a question being asked at every
@@ -198,7 +198,7 @@ class PPOExploreAgent(PPOAgent):
                 actions_qa = [
                     answer_question(
                         self.memory_systems,
-                        self.qa_policy,
+                        self.qa_function,
                         question,
                         split_possessive=False,
                     )
@@ -295,7 +295,7 @@ class PPOExploreAgent(PPOAgent):
             self.critic_values_all[is_train_val_test].append(critic_value)
 
         actions_qa = [
-            answer_question(self.memory_systems, self.qa_policy, question)
+            answer_question(self.memory_systems, self.qa_function, question)
             for question in observations["questions"]
         ]
         action_pair = (actions_qa, self.action2str[action])

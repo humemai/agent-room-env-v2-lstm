@@ -59,7 +59,7 @@ class DQNMMAgent(DQNAgent):
         train_seed: int = 5,
         test_seed: int = 0,
         device: str = "cpu",
-        qa_policy: str = "episodic_semantic",
+        qa_function: str = "episodic_semantic",
         explore_policy: str = "avoid_walls",
         env_config: dict = {
             "question_prob": 1.0,
@@ -101,8 +101,8 @@ class DQNMMAgent(DQNAgent):
             device: This is either "cpu" or "cuda".
             mm_policy: memory management policy. Choose one of "generalize", "random",
                 "rl", or "neural"
-            qa_policy: question answering policy Choose one of "episodic_semantic",
-                "random", or "neural". qa_policy shouldn't be trained with RL. There is
+            qa_function: question answering policy Choose one of "episodic_semantic",
+                "random", or "neural". qa_function shouldn't be trained with RL. There is
                 no sequence of states / actions to learn from.
             explore_policy: The room exploration policy. Choose one of "random",
                 "avoid_walls", "rl", or "neural"
@@ -230,7 +230,7 @@ class DQNMMAgent(DQNAgent):
         )
         action_explore = explore(self.memory_systems, self.explore_policy)
         actions_qa = [
-            answer_question(self.memory_systems, self.qa_policy, q) for q in questions
+            answer_question(self.memory_systems, self.qa_function, q) for q in questions
         ]
         action_pair = (actions_qa, action_explore)
         (
