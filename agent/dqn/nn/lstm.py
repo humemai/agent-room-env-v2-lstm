@@ -9,7 +9,31 @@ from torch import nn
 
 
 class LSTM(nn.Module):
-    """A simple LSTM network."""
+    """A simple LSTM network.
+
+    Attributes:
+        capacity: the capacities of memory systems. e.g., {"episodic": 12,
+            "semantic": 12, "short": 1}
+        entities: list of entities, e.g., ["Foo", "Bar", "laptop", "phone",
+            "desk", "lap"]
+        relations: list of relations, e.g., ["atlocation", "north", "south"]
+        hidden_size: hidden size of the LSTM
+        num_layers: number of the LSTM layers
+        embedding_dim: entity embedding dimension (e.g., 32)
+        bidirectional: whether the LSTM is bidirectional
+        device: "cpu" or "cuda"
+        max_timesteps: maximum number of timesteps.
+        max_strength: maximum strength.
+        word2idx: dictionary that maps words to indices.
+        embeddings: learnable embeddings.
+        short_term_scale: learnable scaling factor for short-term memory.
+        episodic_scale: learnable scaling factor for episodic memory.
+        semantic_scale: learnable scaling factor for semantic memory.
+        short_term_weight: learnable weight for short-term memory.
+        episodic_weight: learnable weight for episodic memory.
+        semantic_weight: learnable weight for semantic memory.
+
+    """
 
     def __init__(
         self,
@@ -19,6 +43,7 @@ class LSTM(nn.Module):
         hidden_size: int = 64,
         num_layers: int = 2,
         embedding_dim: int = 64,
+        bidirectional: bool = False,
         device: str = "cpu",
         max_timesteps: int | None = None,
         max_strength: int | None = None,
@@ -26,14 +51,15 @@ class LSTM(nn.Module):
         """Initialize the LSTM.
 
         Args:
-            capacity: the capacities of memory systems. e.g., {"episodic": 16,
-                "semantic": 16, "short": 1}
+            capacity: the capacities of memory systems. e.g., {"episodic": 12,
+                "semantic": 12, "short": 1}
             entities: list of entities, e.g., ["Foo", "Bar", "laptop", "phone",
                 "desk", "lap"]
             relations : list of relations, e.g., ["atlocation", "north", "south"]
             hidden_size: hidden size of the LSTM
             num_layers: number of the LSTM layers
             embedding_dim: entity embedding dimension (e.g., 32)
+            bidirectional: whether the LSTM is bidirectional
             device: "cpu" or "cuda"
             max_timesteps: maximum number of timesteps.
             max_strength: maximum strength.
@@ -46,6 +72,7 @@ class LSTM(nn.Module):
         self.embedding_dim = embedding_dim
         self.device = device
         self.hidden_size = hidden_size
+        self.bidirectional = bidirectional
         self.num_layers = num_layers
         self.max_fourth_val = max(max_timesteps, max_strength)
 
@@ -55,25 +82,30 @@ class LSTM(nn.Module):
             self.hidden_size,
             self.num_layers,
             batch_first=True,
+            bidirectional=self.bidirectional,
             device=self.device,
         )
 
     def create_embeddings(self) -> None:
         """Create learnable embeddings."""
-        if isinstance(self.entities, dict):
-            self.word2idx = (
-                ["<PAD>"]
-                + [name for names in self.entities.values() for name in names]
-                + self.relations
-                + ["current_time", "timestamp", "strength"]
-            )
-        elif isinstance(self.entities, list):
-            self.word2idx = ["<PAD>"] + self.entities + self.relations
-        else:
+
+        if not (isinstance(self.entities, dict) or isinstance(self.entities, list)):
             raise ValueError(
                 "entities should be either a list or a dictionary, but "
                 f"{type(self.entities)} was given!"
             )
+
+        self.word2idx = (
+            ["<PAD>"]
+            + (
+                [name for names in self.entities.values() for name in names]
+                if isinstance(self.entities, dict)
+                else self.entities
+            )
+            + self.relations
+            + ["current_time", "timestamp", "strength"]
+        )
+
         self.word2idx = {word: idx for idx, word in enumerate(self.word2idx)}
 
         self.embeddings = nn.Embedding(
@@ -96,7 +128,7 @@ class LSTM(nn.Module):
     def make_embedding(
         self, mem: list[str], memory_type: Literal["short", "episodic", "semantic"]
     ) -> torch.Tensor:
-        """Create one embedding vector with summation and concatenation.
+        """Create one embedding vector with summation.
 
         Args:
             mem: memory as a quadruple: [head, relation, tail, num]
@@ -194,8 +226,9 @@ class LSTM(nn.Module):
             memory_types: e.g., ["episodic", "semantic", "short"]
 
         Returns:
-            fc_out: sum of the last hidden states of the LSTM. This is the output of
-                the forward pass. The dimension is (batch_size, hidden_size)
+            memory_representation: sum of the last hidden states of the LSTM. This is
+                the output of the forward pass. The dimension is (batch_size,
+                hidden_size)
 
         """
         x = deepcopy(x_)
@@ -215,6 +248,6 @@ class LSTM(nn.Module):
             weighted_lstm_out = lstm_out[:, -1, :] * weights[memory_type]
             to_sum.append(weighted_lstm_out)
 
-        fc_out = torch.sum(torch.stack(to_sum), dim=0)
+        memory_representation = torch.sum(torch.stack(to_sum), dim=0)
 
-        return fc_out
+        return memory_representation

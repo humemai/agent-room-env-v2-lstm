@@ -17,16 +17,10 @@ from torch import nn
 from torch.distributions import Categorical
 from tqdm.auto import tqdm
 
-from .utils import (
-    plot_results,
-    save_final_results,
-    save_states_actions_probs_values,
-    save_validation,
-    select_action,
-    update_model,
-)
-
 from ..utils import positional_encoding
+from .utils import (plot_results, save_final_results,
+                    save_states_actions_probs_values, save_validation,
+                    select_action, update_model)
 
 
 def init_layer_uniform(layer: nn.Linear, init_w: float = 3e-3) -> None:

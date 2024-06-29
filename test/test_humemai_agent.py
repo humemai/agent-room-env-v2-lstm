@@ -7,11 +7,8 @@ import matplotlib
 
 matplotlib.use("Agg")
 
-import random
 import unittest
 
-import gymnasium as gym
-import numpy as np
 from tqdm.auto import tqdm
 
 from agent import DQNAgent
@@ -62,10 +59,15 @@ class DQNAgentTest(unittest.TestCase):
                             "hidden_size": 2,
                             "num_layers": 1,
                             "embedding_dim": 2,
+                            "bidirectional": False,
                             "max_timesteps": 10,
                             "max_strength": 10,
                         },
-                        "mlp_params": {"hidden_size": 2},
+                        "mlp_params": {
+                            "hidden_size": 2,
+                            "num_hidden_layers": 1,
+                            "dueling_dqn": True,
+                        },
                         "num_samples_for_results": 3,
                         "plotting_interval": 10,
                         "train_seed": test_seed + 5,
@@ -85,7 +87,6 @@ class DQNAgentTest(unittest.TestCase):
                             "include_walls_in_observations": True,
                         },
                         "ddqn": True,
-                        "dueling_dqn": True,
                         "default_root_dir": "./training-results/",
                     }
                     params_all.append(params)

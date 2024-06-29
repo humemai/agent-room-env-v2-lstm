@@ -1,33 +1,20 @@
 """Utility functions for DQN."""
 
-import logging
-import operator
 import os
-import random
-from collections import deque
-from typing import Callable, Deque, Literal
 import shutil
+from typing import Literal
 
 import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
-from humemai.utils import (
-    argmax,
-    is_running_notebook,
-    list_duplicates_of,
-    write_pickle,
-    write_yaml,
-)
+from humemai.utils import (argmax, is_running_notebook, list_duplicates_of,
+                           write_yaml)
 from IPython.display import clear_output
 from tqdm.auto import tqdm
 
-logging.basicConfig(
-    level=os.environ.get("LOGLEVEL", "INFO").upper(),
-    format="%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+from ..utils import write_pickle
 
 
 class ReplayBuffer:
@@ -42,7 +29,6 @@ class ReplayBuffer:
         self,
         observation_type: Literal["dict", "tensor"],
         size: int,
-        obs_dim: tuple = None,
         batch_size: int = 32,
     ):
         """Initialize replay buffer.
@@ -60,8 +46,6 @@ class ReplayBuffer:
             self.next_obs_buf = np.array([{}] * size)
         else:
             raise ValueError("At the moment, observation_type must be 'dict'")
-            # self.obs_buf = np.zeros([size, *obs_dim], dtype=np.float32)
-            # self.next_obs_buf = np.zeros([size, *obs_dim], dtype=np.float32)
 
         self.acts_buf = np.zeros([size], dtype=np.float32)
         self.rews_buf = np.zeros([size], dtype=np.float32)
@@ -339,6 +323,7 @@ def save_final_results(
     q_values: dict,
     self: object,
     policy: Literal["mm", "explore", None],
+    save_the_agent: bool = False,
 ) -> None:
     """Save dqn train / val / test results.
 
@@ -349,6 +334,7 @@ def save_final_results(
         q_values: a dictionary of q_values for train, validation, and test.
         self: the agent object.
         policy: "mm" or "explore"
+        save_the_agent: whether to save the agent or not.
 
     """
     results = {
@@ -370,7 +356,9 @@ def save_final_results(
 
     write_yaml(results, os.path.join(default_root_dir, subdir, "results.yaml"))
     write_yaml(q_values, os.path.join(default_root_dir, subdir, "q_values.yaml"))
-    # write_pickle(self, os.path.join(default_root_dir, "agent.pkl"))
+
+    if save_the_agent:
+        write_pickle(self, os.path.join(default_root_dir, "agent.pkl"))
 
 
 def compute_loss(

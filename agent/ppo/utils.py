@@ -1,6 +1,5 @@
 """Utility functions for PPO."""
 
-import logging
 import os
 import shutil
 from collections import deque
@@ -14,12 +13,6 @@ from tqdm.auto import tqdm
 
 from ..utils import (is_running_notebook, list_duplicates_of, write_pickle,
                      write_yaml)
-
-logging.basicConfig(
-    level=os.environ.get("LOGLEVEL", "INFO").upper(),
-    format="%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
 
 
 def save_final_results(

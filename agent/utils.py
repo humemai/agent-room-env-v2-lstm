@@ -2,23 +2,14 @@
 
 import csv
 import json
-import logging
 import os
 import pickle
 import random
-import shutil
-from glob import glob
 from typing import Union
 
 import numpy as np
 import torch
 import yaml
-
-logging.basicConfig(
-    level=os.environ.get("LOGLEVEL", "INFO").upper(),
-    format="%(asctime)s.%(msecs)03d %(levelname)s %(module)s - %(funcName)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
 
 
 def seed_everything(seed: int) -> None:
@@ -34,35 +25,30 @@ def seed_everything(seed: int) -> None:
 
 def read_json(fname: str) -> dict:
     """Read json"""
-    logging.debug(f"reading json {fname} ...")
     with open(fname, "r") as stream:
         return json.load(stream)
 
 
 def write_json(content: dict, fname: str) -> None:
     """Write json"""
-    logging.debug(f"writing json {fname} ...")
     with open(fname, "w") as stream:
         json.dump(content, stream, indent=4, sort_keys=False)
 
 
 def read_yaml(fname: str) -> dict:
     """Read yaml."""
-    logging.debug(f"reading yaml {fname} ...")
     with open(fname, "r") as stream:
         return yaml.safe_load(stream)
 
 
 def write_yaml(content: dict, fname: str) -> None:
     """write yaml."""
-    logging.debug(f"writing yaml {fname} ...")
     with open(fname, "w") as stream:
         yaml.dump(content, stream, indent=2, sort_keys=False)
 
 
 def write_pickle(to_pickle: object, fname: str):
     """Read pickle"""
-    logging.debug(f"writing pickle {fname} ...")
     with open(fname, "wb") as stream:
         foo = pickle.dump(to_pickle, stream)
     return foo
@@ -70,7 +56,6 @@ def write_pickle(to_pickle: object, fname: str):
 
 def read_pickle(fname: str):
     """Read pickle"""
-    logging.debug(f"reading pickle {fname} ...")
     with open(fname, "rb") as stream:
         foo = pickle.load(stream)
     return foo
@@ -94,9 +79,7 @@ def read_data(data_path: str) -> dict:
             'test': list of test obs}
 
     """
-    logging.debug(f"reading data from {data_path} ...")
     data = read_json(data_path)
-    logging.info(f"Succesfully read data {data_path}")
 
     return data
 
@@ -108,9 +91,7 @@ def load_questions(path: str) -> dict:
         path: path to the question json file.
 
     """
-    logging.debug(f"loading questions from {path}...")
     questions = read_json(path)
-    logging.info(f"questions loaded from {path}!")
 
     return questions
 
@@ -132,7 +113,6 @@ def get_duplicate_dicts(search: dict, target: list) -> list:
 
     """
     assert isinstance(search, dict)
-    logging.debug("finding if duplicate dicts exist ...")
     duplicates = []
 
     for candidate in target:
@@ -140,8 +120,6 @@ def get_duplicate_dicts(search: dict, target: list) -> list:
         if set(search).issubset(set(candidate)):
             if all([val == candidate[key] for key, val in search.items()]):
                 duplicates.append(candidate)
-
-    logging.info(f"{len(duplicates)} duplicates were found!")
 
     return duplicates
 

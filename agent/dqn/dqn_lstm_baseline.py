@@ -9,22 +9,15 @@ from copy import deepcopy
 import gymnasium as gym
 import numpy as np
 import torch
-from torch import nn
 import torch.optim as optim
 from humemai.utils import is_running_notebook, write_yaml
 from room_env.envs.room2 import RoomEnv2
+from torch import nn
 
-from .utils import (
-    ReplayBuffer,
-    plot_results,
-    save_final_results,
-    save_states_q_values_actions,
-    save_validation,
-    select_action,
-    target_hard_update,
-    update_epsilon,
-    update_model,
-)
+from .utils import (ReplayBuffer, plot_results, save_final_results,
+                    save_states_q_values_actions, save_validation,
+                    select_action, target_hard_update, update_epsilon,
+                    update_model)
 
 
 class LSTM(torch.nn.Module):
@@ -37,9 +30,10 @@ class LSTM(torch.nn.Module):
         hidden_size: int = 64,
         num_layers: int = 2,
         embedding_dim: int = 64,
+        bidirectional: bool = False,
         device: str = "cpu",
     ) -> None:
-        """Initialize the LSTMMLP.
+        """Initialize the LSTM.
 
         Args:
             entities: List of entities.
@@ -47,6 +41,7 @@ class LSTM(torch.nn.Module):
             hidden_size: Hidden size of the LSTM.
             num_layers: Number of layers in the LSTM.
             embedding_dim: Dimension of the embeddings.
+            bidirectional: Whether the LSTM is bidirectional.
             device: Device to use.
 
         """
@@ -56,6 +51,7 @@ class LSTM(torch.nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.embedding_dim = embedding_dim
+        self.bidirectional = bidirectional
         self.device = device
 
         self.create_embeddings()
@@ -64,6 +60,7 @@ class LSTM(torch.nn.Module):
             self.hidden_size,
             self.num_layers,
             batch_first=True,
+            bidirectional=bidirectional,
             device=self.device,
         )
 
@@ -74,7 +71,6 @@ class LSTM(torch.nn.Module):
                 ["<PAD>"]
                 + [name for names in self.entities.values() for name in names]
                 + self.relations
-                + ["current_time", "timestamp", "strength"]
             )
         elif isinstance(self.entities, list):
             self.word2idx = ["<PAD>"] + self.entities + self.relations
@@ -93,7 +89,7 @@ class LSTM(torch.nn.Module):
         )
 
     def make_embedding(self, obs: list[str]) -> torch.Tensor:
-        """Create one embedding vector with summation or concatenation.
+        """Create one embedding vector with summation.
 
         Args:
             obs: Observation.
@@ -161,62 +157,74 @@ class LSTM(torch.nn.Module):
 class MLP(torch.nn.Module):
     """Multi-layer perceptron with ReLU activation functions."""
 
-    def __init__(self, n_actions: int, hidden_size: int, device: str) -> None:
+    def __init__(
+        self,
+        n_actions: int,
+        hidden_size: int,
+        device: str,
+        num_hidden_layers: int = 1,
+        dueling_dqn: bool = True,
+    ) -> None:
         """Initialize the MLP.
 
         Args:
             n_actions: Number of actions.
             hidden_size: Hidden size of the linear layer.
             device: "cpu" or "cuda".
+            num_hidden_layers: int, number of hidden layers in the MLP.
+            dueling_dqn: Whether to use dueling DQN.
 
         """
         super(MLP, self).__init__()
         self.device = device
-
         self.hidden_size = hidden_size
+        self.num_hidden_layers = num_hidden_layers
         self.n_actions = n_actions
+        self.dueling_dqn = dueling_dqn
 
-        self.advantage_layer = torch.nn.Sequential(
-            torch.nn.Linear(
-                self.hidden_size,
-                self.hidden_size,
-                device=self.device,
-            ),
-            torch.nn.ReLU(),
-            torch.nn.Linear(
-                self.hidden_size,
-                self.n_actions,
-                device=self.device,
-            ),
+        # Define the layers for the advantage stream
+        advantage_layers = []
+        for _ in range(self.num_hidden_layers):
+            advantage_layers.append(
+                torch.nn.Linear(self.hidden_size, self.hidden_size, device=self.device)
+            )
+            advantage_layers.append(torch.nn.ReLU())
+        advantage_layers.append(
+            torch.nn.Linear(self.hidden_size, self.n_actions, device=self.device)
         )
+        self.advantage_layer = torch.nn.Sequential(*advantage_layers)
 
-        self.value_layer = torch.nn.Sequential(
-            torch.nn.Linear(
-                self.hidden_size,
-                self.hidden_size,
-                device=self.device,
-            ),
-            torch.nn.ReLU(),
-            torch.nn.Linear(
-                self.hidden_size,
-                1,
-                device=self.device,
-            ),
-        )
+        if self.dueling_dqn:
+            # Define the layers for the value stream
+            value_layers = []
+            for _ in range(self.num_hidden_layers):
+                value_layers.append(
+                    torch.nn.Linear(
+                        self.hidden_size, self.hidden_size, device=self.device
+                    )
+                )
+                value_layers.append(torch.nn.ReLU())
+            value_layers.append(
+                torch.nn.Linear(self.hidden_size, 1, device=self.device)
+            )
+            self.value_layer = torch.nn.Sequential(*value_layers)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the neural network.
 
         Args:
-            x: Input tensor. Shape (batch_size, lstm_hidden_size).
+            x: Input tensor. The shape is (batch_size, lstm_hidden_size).
         Returns:
-            torch.Tensor: Output tensor.
+            torch.Tensor: Output tensor. The shape is (batch_size, n_actions).
 
         """
 
-        value = self.value_layer(x)
-        advantage = self.advantage_layer(x)
-        q = value + advantage - advantage.mean(dim=-1, keepdim=True)
+        if self.dueling_dqn:
+            value = self.value_layer(x)
+            advantage = self.advantage_layer(x)
+            q = value + advantage - advantage.mean(dim=-1, keepdim=True)
+        else:
+            q = self.advantage_layer(x)
 
         return q
 
@@ -224,7 +232,7 @@ class MLP(torch.nn.Module):
 class History:
     def __init__(
         self,
-        block_size: int = 6,
+        block_size: int = 4,
         action2str: dict = {0: "north", 1: "east", 2: "south", 3: "west", 4: "stay"},
     ) -> None:
         """Initialize the history.
@@ -246,21 +254,30 @@ class History:
         return [element for block in self.blocks for element in block]
 
     def add_block(self, block: list) -> None:
-        """Add a block to the history."""
+        """Add a block to the history. The oldest block is removed."""
         self.blocks = self.blocks[1:] + [block]
 
     def __repr__(self) -> str:
         return str(self.blocks)
 
     def answer_question(self, question: list) -> str:
-        """Answer a question, by going through the history in backwards."""
+        """Answer a question, by going through the history in backwards. This means that
+        the most recent and relevant observation is used to answer the question.
+        """
         assert len(question) == 4 and question[2] == "?"
         for obs in self.to_list()[::-1]:
             if obs[0] == question[0] and obs[1] == question[1]:
                 return obs[2]
 
     def answer_questions(self, questions: list[list[str]]) -> list[str]:
-        """Answer a list of questions."""
+        """Answer a list of questions.
+
+        Args:
+            questions: List of questions.
+
+        Returns:
+            answers: List of answers.
+        """
         return [self.answer_question(question) for question in questions]
 
     def find_agent_current_location(self) -> str | None:
@@ -349,13 +366,18 @@ class DQNLSTMMLPBaselineAgent:
         max_epsilon: float = 1.0,
         min_epsilon: float = 0.1,
         gamma: float = 0.9,
-        history_block_size: int = 6,
+        history_block_size: int = 4,
         lstm_params: dict = {
             "hidden_size": 64,
             "num_layers": 2,
             "embedding_dim": 64,
+            "bidirectional": False,
         },
-        mlp_params: dict = {"hidden_size": 64},
+        mlp_params: dict = {
+            "hidden_size": 64,
+            "num_hidden_layers": 1,
+            "dueling_dqn": True,
+        },
         num_samples_for_results: int = 10,
         plotting_interval: int = 10,
         train_seed: int = 5,
@@ -372,7 +394,7 @@ class DQNLSTMMLPBaselineAgent:
             "question_interval": 1,
             "include_walls_in_observations": True,
         },
-        default_root_dir: str = "./training-results/stochastic-objects/DQN/baselines/",
+        default_root_dir: str = "./training-results/",
         run_handcrafted_baselines: bool = True,
     ) -> None:
         """Initialize the DQN LSTM Baseline Agent.
@@ -403,22 +425,21 @@ class DQNLSTMMLPBaselineAgent:
         """
         params_to_save = deepcopy(locals())
         del params_to_save["self"]
+        self.default_root_dir = os.path.join(
+            default_root_dir, str(datetime.datetime.now())
+        )
+        self._create_directory(params_to_save)
 
         self.history_block_size = history_block_size
 
         self.train_seed = train_seed
         self.test_seed = test_seed
-        env_config["seed"] = self.train_seed
-
-        self.env_str = env_str
         self.env_config = env_config
+        self.env_config["seed"] = self.train_seed
+        self.env_str = env_str
         self.num_samples_for_results = num_samples_for_results
         self.env = gym.make(self.env_str, **self.env_config)
 
-        self.default_root_dir = os.path.join(
-            default_root_dir, str(datetime.datetime.now())
-        )
-        self._create_directory(params_to_save)
         self.run_handcrafted_baselines = run_handcrafted_baselines
 
         self.device = torch.device(device)
@@ -845,9 +866,6 @@ class DQNLSTMMLPBaselineAgent:
 
         self.plot_results("all", save_fig=True)
         self.env.close()
-
-        self.lstm.train()
-        self.mlp.train()
 
     def plot_results(self, to_plot: str = "all", save_fig: bool = False) -> None:
         """Plot things for DQN training.

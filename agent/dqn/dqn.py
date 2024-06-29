@@ -5,38 +5,25 @@ This should be inherited. This itself should not be used.
 
 import datetime
 import os
-from copy import deepcopy
 import shutil
+from copy import deepcopy
 from typing import Literal
 
 import gymnasium as gym
 import numpy as np
 import torch
 import torch.optim as optim
-
-from humemai.memory import EpisodicMemory, MemorySystems, SemanticMemory, ShortMemory
-from humemai.policy import (
-    answer_question,
-    encode_observation,
-    explore,
-    manage_memory,
-    argmax,
-)
-from humemai.utils import write_yaml, is_running_notebook
-
+from humemai.memory import (EpisodicMemory, MemorySystems, SemanticMemory,
+                            ShortMemory)
+from humemai.policy import (answer_question, argmax, encode_observation,
+                            explore, manage_memory)
+from humemai.utils import is_running_notebook, write_yaml
 
 from .nn import LSTM, MLP
-from .utils import (
-    ReplayBuffer,
-    plot_results,
-    save_final_results,
-    save_states_q_values_actions,
-    save_validation,
-    select_action,
-    target_hard_update,
-    update_epsilon,
-    update_model,
-)
+from .utils import (ReplayBuffer, plot_results, save_final_results,
+                    save_states_q_values_actions, save_validation,
+                    select_action, target_hard_update, update_epsilon,
+                    update_model)
 
 
 class DQNAgent:
@@ -58,8 +45,8 @@ class DQNAgent:
         min_epsilon: float = 0.1,
         gamma: dict[str, float] = {"mm": 0.99, "explore": 0.9},
         capacity: dict = {
-            "episodic": 16,
-            "semantic": 16,
+            "episodic": 12,
+            "semantic": 12,
             "short": 1,
         },
         pretrain_semantic: str | bool = False,
@@ -67,10 +54,15 @@ class DQNAgent:
             "hidden_size": 64,
             "num_layers": 2,
             "embedding_dim": 64,
+            "bidirectional": False,
             "max_timesteps": 100,
             "max_strength": 100,
         },
-        mlp_params: dict = {"hidden_size": 64},
+        mlp_params: dict = {
+            "hidden_size": 64,
+            "num_hidden_layers": 1,
+            "dueling_dqn": True,
+        },
         num_samples_for_results: int = 10,
         plotting_interval: int = 10,
         train_seed: int = 5,
@@ -92,7 +84,6 @@ class DQNAgent:
             "include_walls_in_observations": True,
         },
         ddqn: bool = True,
-        dueling_dqn: bool = True,
         default_root_dir: str = "./training-results/",
     ) -> None:
         """Initialization.
@@ -120,7 +111,6 @@ class DQNAgent:
                 "episodic", "semantic", or "random". This is the reward function.
             env_config: The configuration of the environment.
             ddqn: whether to use double DQN
-            dueling_dqn: whether to use dueling DQN
             default_root_dir: default root directory to save results
 
         """
@@ -184,7 +174,6 @@ class DQNAgent:
         print(f"Running on {self.device}")
 
         self.ddqn = ddqn
-        self.dueling_dqn = dueling_dqn
 
         self.val_dir_names = {"mm": [], "explore": []}
         self.is_notebook = is_running_notebook()
@@ -220,7 +209,6 @@ class DQNAgent:
 
         self.mlp_params = mlp_params
         self.mlp_params["device"] = self.device
-        self.mlp_params["dueling_dqn"] = self.dueling_dqn
 
         self.mlp_mm = MLP(n_actions=len(self.action2str["mm"]), **self.mlp_params)
         self.mlp_mm_target = MLP(
@@ -754,7 +742,7 @@ class DQNAgent:
         self.env.close()
 
     def process_room_observations(self, observations_room: list):
-        """Process room observations.
+        """Process room observations. This is used when training an exploration policy.
 
         Args:
             observations_room: observations["room"] from the environment
@@ -765,7 +753,7 @@ class DQNAgent:
 
             state = self.memory_systems.return_as_a_dict_list()
 
-            with torch.no_grad():
+            with torch.no_grad():  # we used trained weights for mm.
                 q_values = (
                     self.mlp_mm(
                         self.lstm_mm(np.array([state]), self.memory_types["mm"])
@@ -785,10 +773,9 @@ class DQNAgent:
     def step_explore(
         self, state: dict, questions: list, greedy: bool
     ) -> tuple[dict, int, float, bool, list]:
-        """Step through the environment.
+        """Step through the environment with the exploration policy.
 
-        This is the only place where env.step() is called. Make sure to call this
-        function to interact with the environment.
+        Make sure to call this function to interact with the environment.
 
         Args:
             state: state of the memory systems
@@ -837,6 +824,7 @@ class DQNAgent:
         actions. The filling continues until it reaches the warm start size.
 
         """
+        # Delete the replay buffer for the memory management agent, and create a new one
         self.replay_buffer = ReplayBuffer(
             observation_type="dict",
             size=self.replay_buffer_size,
@@ -869,7 +857,7 @@ class DQNAgent:
         """Train the exploration agent.
 
         The exploration agent is initialized with the memory management agent's
-        best weights. Consider it as finetuing the exploration agent. Of cousre the
+        best weights. Consider it as fine-tuning the exploration agent. Of course the
         mlp_explore is randomly initialized.
 
         """

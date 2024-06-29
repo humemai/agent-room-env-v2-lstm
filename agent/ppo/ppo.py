@@ -36,8 +36,8 @@ class PPOAgent(HandcraftedAgent):
         epsilon: float = 0.2,
         entropy_weight: float = 0.005,
         capacity: dict = {
-            "episodic": 16,
-            "semantic": 16,
+            "episodic": 12,
+            "semantic": 12,
             "short": 1,
         },
         pretrain_semantic: str | bool = False,

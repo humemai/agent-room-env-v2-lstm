@@ -44,8 +44,8 @@ class LSTM(nn.Module):
         """Initialize the LSTM.
 
         Args:
-            capacity: the capacities of memory systems. e.g., {"episodic": 16,
-                "semantic": 16, "short": 1}
+            capacity: the capacities of memory systems. e.g., {"episodic": 12,
+                "semantic": 12, "short": 1}
             entities: list of entities, e.g., ["Foo", "Bar", "laptop", "phone",
                 "desk", "lap"]
             relations : list of relations, e.g., ["atlocation", "north", "south"]

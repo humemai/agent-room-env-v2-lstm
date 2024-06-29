@@ -34,10 +34,8 @@ class PPOExploreAgent(PPOAgent):
         epsilon: float = 0.2,
         entropy_weight: float = 0.005,
         capacity: dict = {
-            "episodic": 16,
-            "episodic_agent": 0,
-            "semantic": 16,
-            "semantic_map": 0,
+            "episodic": 12,
+            "semantic": 12,
             "short": 1,
         },
         pretrain_semantic: str | bool = False,

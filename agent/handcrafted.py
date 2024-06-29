@@ -3,13 +3,15 @@
 import datetime
 import os
 import shutil
-from typing import Literal
 from copy import deepcopy
+from typing import Literal
 
 import gymnasium as gym
 import numpy as np
-from humemai.memory import EpisodicMemory, MemorySystems, SemanticMemory, ShortMemory
-from humemai.policy import answer_question, encode_observation, explore, manage_memory
+from humemai.memory import (EpisodicMemory, MemorySystems, SemanticMemory,
+                            ShortMemory)
+from humemai.policy import (answer_question, encode_observation, explore,
+                            manage_memory)
 from humemai.utils import write_yaml
 
 
@@ -44,8 +46,8 @@ class HandcraftedAgent:
         explore_policy: Literal["random", "avoid_walls"] = "avoid_walls",
         num_samples_for_results: int = 10,
         capacity: dict = {
-            "episodic": 16,
-            "semantic": 16,
+            "episodic": 12,
+            "semantic": 12,
             "short": 1,
         },
         pretrain_semantic: Literal[False, "include_walls", "exclude_walls"] = False,

@@ -7,12 +7,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 
-import random
 import unittest
-
-import gymnasium as gym
-import numpy as np
-from tqdm.auto import tqdm
 
 from agent import DQNLSTMMLPBaselineAgent
 
@@ -35,8 +30,13 @@ class DQNLSTMMLPBaselineAgentTest(unittest.TestCase):
                 "hidden_size": 2,
                 "num_layers": 1,
                 "embedding_dim": 2,
+                "bidirectional": False,
             },
-            "mlp_params": {"hidden_size": 2},
+            "mlp_params": {
+                "hidden_size": 2,
+                "num_hidden_layers": 1,
+                "dueling_dqn": True,
+            },
             "num_samples_for_results": 3,
             "plotting_interval": 10,
             "train_seed": 6,
@@ -46,7 +46,7 @@ class DQNLSTMMLPBaselineAgentTest(unittest.TestCase):
                 "question_prob": 1.0,
                 "terminates_at": 4,
                 "randomize_observations": "objects",
-                "room_size": "l",
+                "room_size": "s",
                 "rewards": {"correct": 1, "wrong": 0, "partial": 0},
                 "make_everything_static": False,
                 "num_total_questions": 10,

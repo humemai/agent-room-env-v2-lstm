@@ -1,2 +1,2 @@
-room-env==2.0.1
+room-env==2.0.2
 humemai==1.0.3
