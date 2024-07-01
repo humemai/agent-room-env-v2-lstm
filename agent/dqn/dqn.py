@@ -854,18 +854,8 @@ class DQNAgent:
                 new_episode_starts = True
 
     def train_explore(self) -> None:
-        """Train the exploration agent.
-
-        The exploration agent is initialized with the memory management agent's
-        best weights. Consider it as fine-tuning the exploration agent. Of course the
-        mlp_explore is randomly initialized.
-
-        """
+        """Train the exploration agent."""
         os.makedirs(os.path.join(self.default_root_dir, "explore"), exist_ok=True)
-
-        # Assuming that self.lstm_mm is already trained and the best weights are loaded.
-        self.lstm_explore.load_state_dict(self.lstm_mm.state_dict())
-        self.lstm_explore_target.load_state_dict(self.lstm_mm.state_dict())
 
         # Freeze the weights of self.lstm_mm and self.mlp_mm
         self.lstm_mm.eval()
