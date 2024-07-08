@@ -13,17 +13,28 @@ import gymnasium as gym
 import numpy as np
 import torch
 import torch.optim as optim
-from humemai.memory import (EpisodicMemory, MemorySystems, SemanticMemory,
-                            ShortMemory)
-from humemai.policy import (answer_question, argmax, encode_observation,
-                            explore, manage_memory)
+from humemai.memory import EpisodicMemory, MemorySystems, SemanticMemory, ShortMemory
+from humemai.policy import (
+    answer_question,
+    argmax,
+    encode_observation,
+    explore,
+    manage_memory,
+)
 from humemai.utils import is_running_notebook, write_yaml
 
 from .nn import LSTM, MLP
-from .utils import (ReplayBuffer, plot_results, save_final_results,
-                    save_states_q_values_actions, save_validation,
-                    select_action, target_hard_update, update_epsilon,
-                    update_model)
+from .utils import (
+    ReplayBuffer,
+    plot_results,
+    save_final_results,
+    save_states_q_values_actions,
+    save_validation,
+    select_action,
+    target_hard_update,
+    update_epsilon,
+    update_model,
+)
 
 
 class DQNAgent:
@@ -50,6 +61,7 @@ class DQNAgent:
             "short": 1,
         },
         pretrain_semantic: str | bool = False,
+        semantic_decay_factor: float = 1.0,
         lstm_params: dict = {
             "hidden_size": 64,
             "num_layers": 2,
@@ -57,14 +69,16 @@ class DQNAgent:
             "bidirectional": False,
             "max_timesteps": 100,
             "max_strength": 100,
+            "relu_for_attention": True,
         },
         mlp_params: dict = {
             "hidden_size": 64,
             "num_hidden_layers": 1,
             "dueling_dqn": True,
         },
-        num_samples_for_results: int = 10,
-        plotting_interval: int = 10,
+        num_samples_for_results: dict = {"val": 10, "test": 10},
+        validation_interval: int = 1,
+        plotting_interval: int = 20,
         train_seed: int = 5,
         test_seed: int = 0,
         device: Literal["cpu", "cuda"] = "cpu",
@@ -101,8 +115,10 @@ class DQNAgent:
             gamma: discount factor
             capacity: The capacity of each human-like memory systems
             pretrain_semantic: whether to pretrain the semantic memory system.
+            semantic_decay_factor: decay factor for the semantic memory system
             lstm_params: parameters for the neural network (DQN)
             num_samples_for_results: The number of samples to validate / test the agent.
+            validation_interval: interval to validate
             plotting_interval: interval to plot results
             train_seed: seed for training
             test_seed: seed for testing
@@ -133,8 +149,10 @@ class DQNAgent:
         self.env_config["seed"] = self.train_seed
         self.env_str = env_str
         self.num_samples_for_results = num_samples_for_results
+        self.validation_interval = validation_interval
         self.capacity = capacity
         self.pretrain_semantic = pretrain_semantic
+        self.semantic_decay_factor = semantic_decay_factor
         self.env = gym.make(self.env_str, **self.env_config)
 
         self.action2str = {
@@ -264,10 +282,11 @@ class DQNAgent:
         """Initialize the agent's memory systems. This has nothing to do with the
         replay buffer."""
         self.memory_systems = MemorySystems(
-            episodic=EpisodicMemory(
-                capacity=self.capacity["episodic"], remove_duplicates=False
+            episodic=EpisodicMemory(capacity=self.capacity["episodic"]),
+            semantic=SemanticMemory(
+                capacity=self.capacity["semantic"],
+                decay_factor=self.semantic_decay_factor,
             ),
-            semantic=SemanticMemory(capacity=self.capacity["semantic"]),
             short=ShortMemory(capacity=self.capacity["short"]),
         )
 
@@ -398,6 +417,11 @@ class DQNAgent:
             self.action2str["mm"][action],
             split_possessive=False,
         )
+        if (
+            hasattr(self.memory_systems, "semantic")
+            and self.memory_systems.semantic.capacity > 0
+        ):
+            self.memory_systems.semantic.decay()
         action_explore = explore(self.memory_systems, self.explore_policy_heuristic)
         answers = [
             answer_question(
@@ -505,8 +529,17 @@ class DQNAgent:
 
                 self.scores["mm"]["train"].append(score)
                 score = 0
-                with torch.no_grad():
-                    self.validate(self.lstm_mm, self.mlp_mm, "mm")
+
+                if (
+                    self.iteration_idx
+                    % (
+                        self.validation_interval
+                        * (self.env_config["terminates_at"] + 1)
+                    )
+                    == 0
+                ):
+                    with torch.no_grad():
+                        self.validate(self.lstm_mm, self.mlp_mm, "mm")
 
             else:
                 states_, actions_, q_values_ = self.process_remaining_observations(
@@ -584,7 +617,7 @@ class DQNAgent:
         q_values_local = []
         actions_local = []
 
-        for idx in range(self.num_samples_for_results):
+        for idx in range(self.num_samples_for_results[val_or_test]):
             new_episode_starts = True
             score = 0
             while True:
@@ -603,7 +636,7 @@ class DQNAgent:
                     remaining = self.process_first_observation(observations["room"])
                     score += reward
 
-                    if idx == self.num_samples_for_results - 1:
+                    if idx == self.num_samples_for_results[val_or_test] - 1:
                         states_local.append(state)
                         q_values_local.append(q_values)
                         self.q_values["mm"][val_or_test].append(q_values)
@@ -617,7 +650,7 @@ class DQNAgent:
                         remaining, greedy=True
                     )
 
-                    if idx == self.num_samples_for_results - 1:
+                    if idx == self.num_samples_for_results[val_or_test] - 1:
                         states_local.extend(states_[:-1])
                         q_values_local.extend(q_values_)
                         self.q_values["mm"][val_or_test].extend(q_values_)
@@ -643,6 +676,7 @@ class DQNAgent:
         """
         lstm.eval()
         mlp.eval()
+        self.num_validation += self.validation_interval
 
         if policy_type == "mm":
             middle_function = self.validate_test_middle_mm
@@ -659,6 +693,7 @@ class DQNAgent:
             scores=self.scores[policy_type],
             default_root_dir=self.default_root_dir,
             num_validation=self.num_validation,
+            validation_interval=self.validation_interval,
             val_dir_names=self.val_dir_names[policy_type],
             lstm=lstm,
             mlp=mlp,
@@ -673,7 +708,6 @@ class DQNAgent:
             self.num_validation,
         )
         self.env.close()
-        self.num_validation += 1
         lstm.train()
         mlp.train()
 
@@ -756,7 +790,7 @@ class DQNAgent:
             with torch.no_grad():  # we used trained weights for mm.
                 q_values = (
                     self.mlp_mm(
-                        self.lstm_mm(np.array([state]), self.memory_types["mm"])
+                        self.lstm_mm(np.array([state]), self.memory_types["mm"])[0]
                     )
                     .detach()
                     .cpu()
@@ -769,6 +803,11 @@ class DQNAgent:
                 policy=self.action2str["mm"][action],
                 split_possessive=False,
             )
+        if (
+            hasattr(self.memory_systems, "semantic")
+            and self.memory_systems.semantic.capacity > 0
+        ):
+            self.memory_systems.semantic.decay()
 
     def step_explore(
         self, state: dict, questions: list, greedy: bool
@@ -854,8 +893,18 @@ class DQNAgent:
                 new_episode_starts = True
 
     def train_explore(self) -> None:
-        """Train the exploration agent."""
+        """Train the exploration agent.
+
+        The exploration agent is initialized with the memory management agent's
+        best weights. Consider it as fine-tuning the exploration agent. Of course the
+        mlp_explore is randomly initialized.
+
+        """
         os.makedirs(os.path.join(self.default_root_dir, "explore"), exist_ok=True)
+
+        # Assuming that self.lstm_mm is already trained and the best weights are loaded.
+        self.lstm_explore.load_state_dict(self.lstm_mm.state_dict())
+        self.lstm_explore_target.load_state_dict(self.lstm_mm.state_dict())
 
         # Freeze the weights of self.lstm_mm and self.mlp_mm
         self.lstm_mm.eval()
@@ -908,8 +957,17 @@ class DQNAgent:
 
                 self.scores["explore"]["train"].append(score)
                 score = 0
-                with torch.no_grad():
-                    self.validate(self.lstm_explore, self.mlp_explore, "explore")
+
+                if (
+                    self.iteration_idx
+                    % (
+                        self.validation_interval
+                        * (self.env_config["terminates_at"] + 1)
+                    )
+                    == 0
+                ):
+                    with torch.no_grad():
+                        self.validate(self.lstm_explore, self.mlp_explore, "explore")
 
             if not new_episode_starts:
                 loss = update_model(
@@ -976,7 +1034,7 @@ class DQNAgent:
         q_values_local = []
         actions_local = []
 
-        for idx in range(self.num_samples_for_results):
+        for idx in range(self.num_samples_for_results[val_or_test]):
             new_episode_starts = True
             score = 0
             while True:
@@ -996,7 +1054,7 @@ class DQNAgent:
                         self.process_room_observations(observations["room"])
                     score += reward
 
-                    if idx == self.num_samples_for_results - 1:
+                    if idx == self.num_samples_for_results[val_or_test] - 1:
                         states_local.append(state)
                         q_values_local.append(q_values)
                         self.q_values["explore"][val_or_test].append(q_values)

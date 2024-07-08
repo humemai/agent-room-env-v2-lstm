@@ -6,6 +6,7 @@ from typing import Literal
 import numpy as np
 import torch
 from torch import nn
+import torch.nn.functional as F
 
 
 class LSTM(nn.Module):
@@ -40,13 +41,14 @@ class LSTM(nn.Module):
         capacity: dict,
         entities: list | dict,
         relations: list,
-        hidden_size: int = 64,
         num_layers: int = 2,
         embedding_dim: int = 64,
+        hidden_size: int = 64,
         bidirectional: bool = False,
         device: str = "cpu",
         max_timesteps: int | None = None,
         max_strength: int | None = None,
+        relu_for_attention: bool = True,
     ) -> None:
         """Initialize the LSTM.
 
@@ -56,13 +58,15 @@ class LSTM(nn.Module):
             entities: list of entities, e.g., ["Foo", "Bar", "laptop", "phone",
                 "desk", "lap"]
             relations : list of relations, e.g., ["atlocation", "north", "south"]
-            hidden_size: hidden size of the LSTM
             num_layers: number of the LSTM layers
             embedding_dim: entity embedding dimension (e.g., 32)
+            hidden_size: hidden size of the LSTM
             bidirectional: whether the LSTM is bidirectional
             device: "cpu" or "cuda"
             max_timesteps: maximum number of timesteps.
             max_strength: maximum strength.
+            relu_for_attention: whether to apply non-linearity to the value
+                matrix
 
         """
         super().__init__()
@@ -75,6 +79,7 @@ class LSTM(nn.Module):
         self.bidirectional = bidirectional
         self.num_layers = num_layers
         self.max_fourth_val = max(max_timesteps, max_strength)
+        self.relu_for_attention = relu_for_attention
 
         self.create_embeddings()
         self.lstm = nn.LSTM(
@@ -85,6 +90,19 @@ class LSTM(nn.Module):
             bidirectional=self.bidirectional,
             device=self.device,
         )
+
+        # Learnable scaling factors
+        self.short_term_scale = nn.Parameter(torch.tensor(1.0))
+        self.episodic_scale = nn.Parameter(torch.tensor(1.0))
+        self.semantic_scale = nn.Parameter(torch.tensor(1.0))
+
+        # Define linear layers for query, key, and value matrices
+        input_dim_attention = (
+            self.hidden_size if not self.bidirectional else 2 * self.hidden_size
+        )
+        self.query_net = nn.Linear(input_dim_attention, self.hidden_size)
+        self.key_net = nn.Linear(input_dim_attention, self.hidden_size)
+        self.value_net = nn.Linear(input_dim_attention, self.hidden_size)
 
     def create_embeddings(self) -> None:
         """Create learnable embeddings."""
@@ -114,16 +132,6 @@ class LSTM(nn.Module):
             device=self.device,
             padding_idx=0,
         )
-
-        # Learnable scaling factors
-        self.short_term_scale = nn.Parameter(torch.tensor(1.0))
-        self.episodic_scale = nn.Parameter(torch.tensor(1.0))
-        self.semantic_scale = nn.Parameter(torch.tensor(1.0))
-
-        # Learnable weights for memory types
-        self.short_term_weight = nn.Parameter(torch.tensor(1.0))
-        self.episodic_weight = nn.Parameter(torch.tensor(1.0))
-        self.semantic_weight = nn.Parameter(torch.tensor(1.0))
 
     def make_embedding(
         self, mem: list[str], memory_type: Literal["short", "episodic", "semantic"]
@@ -213,7 +221,9 @@ class LSTM(nn.Module):
 
         return batch_embeddings
 
-    def forward(self, x_: np.ndarray, memory_types: list[str]) -> torch.Tensor:
+    def forward(
+        self, x_: np.ndarray, memory_types: list[str]
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """Forward-pass.
 
         Note that before we make a forward pass, argument x_ will be deepcopied. This
@@ -229,25 +239,52 @@ class LSTM(nn.Module):
             memory_representation: sum of the last hidden states of the LSTM. This is
                 the output of the forward pass. The dimension is (batch_size,
                 hidden_size)
+            attention_weights: attention weights. The dimension is (batch_size,
+                len(memory_types), len(memory_types))
 
         """
         x = deepcopy(x_)
         assert isinstance(x, np.ndarray)
-        to_sum = []
 
-        weights = {
-            "short": self.short_term_weight,
-            "episodic": self.episodic_weight,
-            "semantic": self.semantic_weight,
-        }
+        hidden_states = []
 
         for memory_type in memory_types:
             batch = [sample[memory_type] for sample in x]
             batch = self.create_batch(batch, memory_type=memory_type)
             lstm_out, _ = self.lstm(batch)
-            weighted_lstm_out = lstm_out[:, -1, :] * weights[memory_type]
-            to_sum.append(weighted_lstm_out)
+            lstm_last_hidden_state = lstm_out[:, -1, :]  # (batch_size, hidden_size)
+            hidden_states.append(lstm_last_hidden_state)
 
-        memory_representation = torch.sum(torch.stack(to_sum), dim=0)
+        # Convert hidden_states into a torch.Tensor
+        # (batch_size, num_memory_types, hidden_size)
+        hidden_states = torch.stack(hidden_states, dim=1)
 
-        return memory_representation
+        # Apply key, query, and value networks
+        # (batch_size, num_memory_types, hidden_size)
+        keys = self.key_net(hidden_states)
+        queries = self.query_net(hidden_states)
+        if self.relu_for_attention:
+            values = F.relu(self.value_net(hidden_states))
+        else:
+            values = self.value_net(hidden_states)
+
+        # Compute attention weights using queries and keys, with scaling
+        # (batch_size, num_memory_types, num_memory_types)
+        attention_logits = torch.matmul(queries, keys.transpose(-2, -1)) / torch.sqrt(
+            torch.tensor(keys.shape[-1], dtype=torch.float32)
+        )
+
+        # Softmax over last dimension
+        # (batch_size, num_memory_types, num_memory_types)
+        attention_weights = F.softmax(attention_logits, dim=-1)
+        attention_weights = attention_weights / attention_weights.shape[-2]
+
+        # Weighted sum of values using attention weights
+        # (batch_size, num_memory_types, hidden_size)
+        weighted_sum = torch.matmul(attention_weights, values)
+
+        # Summing over memory types to get the final memory representation
+        # (batch_size, hidden_size)
+        memory_representation = torch.sum(weighted_sum, dim=1)
+
+        return memory_representation, attention_weights.detach().cpu()

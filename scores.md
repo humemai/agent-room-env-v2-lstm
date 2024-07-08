@@ -1,11 +1,56 @@
 # Scores
 
-Updated on 20-Apr-2024. I changed hyperparameters, i.e., disabling ddqn and reducing the
-warm start size, and the results look different from those of the original paper.
+```text
+average number of observations per room for baseline agent:
+room_size=xxs   num_obs=6.0     max_obs=6   min_obs=6
+room_size=xs    num_obs=6.52    max_obs=8   min_obs=5
+room_size=s     num_obs=5.64    max_obs=7   min_obs=5
+room_size=m     num_obs=6.3     max_obs=10  min_obs=5
+room_size=l     num_obs=5.32    max_obs=8   min_obs=5
+room_size=xl    num_obs=5.58    max_obs=7   min_obs=5
+room_size=xxl   num_obs=6.0     max_obs=8   min_obs=5
+```
 
 ## stochastic objects
 
-### l
+### xxl
+
+THIS DOESN'T WORK AT ALL!! NEXT PAPER!
+
+### xl
+
+![alt text](room-xl.png)
+
+```python
+The number of room: 32
+The number of static_objects: 8
+The number of independent_objects: 8
+The number of dependent_objects: 8
+```
+
+lstm: 155136
+mlp: 19206
+
+| agent_type       | capacity | test (std) | test_mm (std) | num_params                           | training_time (hrs) |
+| ---------------- | -------- | ---------- | ------------- | ------------------------------------ | ------------------- |
+| HumemAI-episodic | 12       | 194 (+-29) | 191 (+-42)    | 83331 + 8580 + 83331 + 8710 = 183952 |                     |
+| HumemAI-hybrid   | 12       | 160 (+-30) | 105 (+-37)    | 83331 + 8580 + 83331 + 8710 = 183952 |                     |
+| baseline         | 12       | 144 (+-14) |               | 155136 + 19206 = 174342              |                     |
+| HumemAI-semantic | 12       | 124 (+-65) | 111 (+-43)    | 83331 + 8580 + 83331 + 8710 = 183952 |                     |
+| ---------------- | -------- | ---------- | ------------- |                                      |                     |
+| HumemAI-hybrid   | 24       | 214 (+-64) | 127 (+-26)    | 83331 + 8580 + 83331 + 8710 = 183952 |                     |
+| HumemAI-episodic | 24       | 211 (+-22) | 221 (+-16)    | 83331 + 8580 + 83331 + 8710 = 183952 |                     |
+| baseline         | 24       | 138 (+-52) |               | 155136 + 19206 = 174342              |                     |
+| HumemAI-semantic | 24       | 112 (+-79) | 98 (+-45)     | 83331 + 8580 + 83331 + 8710 = 183952 |                     |
+| ---------------- | -------- | ---------- | ------------- |                                      |                     |
+| HumemAI-hybrid   | 48       | 235 (+-37) | 118 (+-18)    | 83331 + 8580 + 83331 + 8710 = 183952 |                     |
+| HumemAI-semantic | 48       | 226 (+-97) | 192 (+-13)    | 83331 + 8580 + 83331 + 8710 = 183952 |                     |
+| HumemAI-episodic | 48       | 225 (+-25) | 201 (+-42)    | 83331 + 8580 + 83331 + 8710 = 183952 |                     |
+| baseline         | 48       | 200 (+-15) |               | 155136 + 19206 = 174342              |                     |
+| ---------------- | -------- | ---------- | ------------- | 83331 + 8580 + 83331 + 8710 = 183952 |                     |
+| baseline         | 96       | 155 (+-77) |               | 155136 + 19206 = 174342              |                     |
+| ---------------- | -------- | ---------- | ------------- | 83331 + 8580 + 83331 + 8710 = 183952 |                     |
+| baseline         | 192      | 144 (+-68) |               | 155136 + 19206 = 174342              |                     |
 
 ```python
 capacity = {
@@ -116,7 +161,3 @@ average observations per room (block): 5.71
 | 100                | 571          | random      |          |         | 413.8     | 64.95    |            |
 | 100                | 571          | avoid_walls |          |         | 423.6     | 78.17    |            |
 | 100                | 571          | RL          | 294.82   | 67.3    | 288.96    | 65.33    | 285,957    |
-
-### xl
-
-THIS DOESN'T WORK AT ALL!! MAYBE GNN WILL HELP

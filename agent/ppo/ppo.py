@@ -57,7 +57,7 @@ class PPOAgent(HandcraftedAgent):
             "max_strength": 100,
         },
         run_test: bool = True,
-        num_samples_for_results: int = 10,
+        num_samples_for_results: dict = {"val": 10, "test": 10},
         train_seed: int = 5,
         test_seed: int = 0,
         device: str = "cpu",

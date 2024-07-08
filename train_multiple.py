@@ -43,8 +43,8 @@ params = {
         "max_strength": 100,
     },
     "run_test": True,
-    "num_samples_for_results": 10,
-    "plotting_interval": 10,
+    "num_samples_for_results": {"val": 10, "test": 10},
+    "plotting_interval": 20,
     "train_seed": 5,
     "test_seed": 0,
     "device": "cpu",
@@ -62,7 +62,7 @@ params = {
     "ddqn": True,
     "dueling_dqn": True,
     "default_root_dir": None,
-    # "default_root_dir": f"./training-results/baselines/dqn/history_block_size={history_block_size}",
+    # "default_root_dir": f"./training-results/non-equal-object-probs/baselines/dqn/history_block_size={history_block_size}",
     "run_handcrafted_baselines": True,
 }
 
@@ -79,7 +79,7 @@ for history_block_size in [1]:
         params["train_seed"] = test_seed + 5
         params["history_block_size"] = history_block_size
         params["default_root_dir"] = (
-            f"./training-results/baselines/dqn/history_block_size={history_block_size}"
+            f"./training-results/non-equal-object-probs/baselines/dqn/history_block_size={history_block_size}"
         )
 
         config_file_name = (

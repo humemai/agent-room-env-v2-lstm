@@ -55,7 +55,7 @@ class PPOExploreAgent(PPOAgent):
             "max_strength": 100,
         },
         run_test: bool = True,
-        num_samples_for_results: int = 10,
+        num_samples_for_results: dict = {"val": 10, "test": 10},
         train_seed: int = 5,
         test_seed: int = 0,
         device: str = "cpu",
@@ -175,7 +175,7 @@ class PPOExploreAgent(PPOAgent):
         self.env = gym.make(self.env_str, **self.env_config)
         scores = []
 
-        for _ in range(self.num_samples_for_results):
+        for _ in range(self.num_samples_for_results["test"]):
             score = 0
             self.init_memory_systems()
             observations, info = self.env.reset()
@@ -423,8 +423,8 @@ class PPOExploreAgent(PPOAgent):
         """
         scores = []
 
-        for idx in range(self.num_samples_for_results):
-            if idx == self.num_samples_for_results - 1:
+        for idx in range(self.num_samples_for_results[val_or_test]):
+            if idx == self.num_samples_for_results[val_or_test] - 1:
                 save_results = True
             else:
                 save_results = False

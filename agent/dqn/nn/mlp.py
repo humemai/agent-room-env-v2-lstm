@@ -1,3 +1,5 @@
+"""MLP module for DQN to approximate the Q-function."""
+
 import torch
 
 

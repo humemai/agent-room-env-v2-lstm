@@ -8,10 +8,8 @@ from typing import Literal
 
 import gymnasium as gym
 import numpy as np
-from humemai.memory import (EpisodicMemory, MemorySystems, SemanticMemory,
-                            ShortMemory)
-from humemai.policy import (answer_question, encode_observation, explore,
-                            manage_memory)
+from humemai.memory import EpisodicMemory, MemorySystems, SemanticMemory, ShortMemory
+from humemai.policy import answer_question, encode_observation, explore, manage_memory
 from humemai.utils import write_yaml
 
 
@@ -44,13 +42,14 @@ class HandcraftedAgent:
             "episodic_semantic", "episodic", "semantic", "random"
         ] = "episodic_semantic",
         explore_policy: Literal["random", "avoid_walls"] = "avoid_walls",
-        num_samples_for_results: int = 10,
+        num_samples_for_results: int = 3,
         capacity: dict = {
             "episodic": 12,
             "semantic": 12,
             "short": 1,
         },
         pretrain_semantic: Literal[False, "include_walls", "exclude_walls"] = False,
+        semantic_decay_factor: float = 1.0,
         default_root_dir: str = "./training-results/",
     ) -> None:
         """Initialize the agent.
@@ -60,13 +59,14 @@ class HandcraftedAgent:
             env_config: The configuration of the environment.
             mm_policy: memory management policy. Choose one of "random", "episodic",
                 "semantic", or "generalize"
-            qa_function: The question answering policy. Choose one of "episodic_semantic",
-                "episodic", "semantic", or "random"
+            qa_function: The question answering policy. Choose one of
+                "episodic_semantic", "episodic", "semantic", or "random"
             explore_policy: The room exploration policy. Choose one of "random",
                 or "avoid_walls"
             num_samples_for_results: The number of samples to validate / test the agent.
             capacity: The capacity of each human-like memory systems.
             pretrain_semantic: Whether or not to pretrain the semantic memory system.
+            semantic_decay_factor: The decay factor for the semantic memory system.
             default_root_dir: default root directory to store the results.
 
         """
@@ -97,6 +97,7 @@ class HandcraftedAgent:
         self.num_samples_for_results = num_samples_for_results
         self.capacity = capacity
         self.pretrain_semantic = pretrain_semantic
+        self.semantic_decay_factor = semantic_decay_factor
         self.env = gym.make(self.env_str, **self.env_config)
         self.default_root_dir = os.path.join(
             default_root_dir, str(datetime.datetime.now())
@@ -148,6 +149,11 @@ class HandcraftedAgent:
                         self.mm_policy,
                         split_possessive=False,
                     )
+                if (
+                    hasattr(self.memory_systems, "semantic")
+                    and self.memory_systems.semantic.capacity > 0
+                ):
+                    self.memory_systems.semantic.decay()
 
                 actions_qa = [
                     str(
@@ -181,10 +187,11 @@ class HandcraftedAgent:
         """Initialize the agent's memory systems. This has nothing to do with the
         replay buffer."""
         self.memory_systems = MemorySystems(
-            episodic=EpisodicMemory(
-                capacity=self.capacity["episodic"], remove_duplicates=False
+            episodic=EpisodicMemory(capacity=self.capacity["episodic"]),
+            semantic=SemanticMemory(
+                capacity=self.capacity["semantic"],
+                decay_factor=self.semantic_decay_factor,
             ),
-            semantic=SemanticMemory(capacity=self.capacity["semantic"]),
             short=ShortMemory(capacity=self.capacity["short"]),
         )
 

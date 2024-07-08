@@ -1,0 +1,6 @@
+random:
+  mean: 20.0
+  std: 7.4565407529228995
+avoid_walls:
+  mean: 33.2
+  std: 8.23164625090267

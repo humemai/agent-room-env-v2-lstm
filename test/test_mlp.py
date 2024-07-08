@@ -11,7 +11,7 @@ class TestMLP(unittest.TestCase):
         self.device = "cpu"
         self.mlp_config = {
             "n_actions": 5,
-            "hidden_size": 64,
+            "hidden_size": 4,
             "device": self.device,
             "num_hidden_layers": 2,
             "dueling_dqn": True,

@@ -14,10 +14,17 @@ from humemai.utils import is_running_notebook, write_yaml
 from room_env.envs.room2 import RoomEnv2
 from torch import nn
 
-from .utils import (ReplayBuffer, plot_results, save_final_results,
-                    save_states_q_values_actions, save_validation,
-                    select_action, target_hard_update, update_epsilon,
-                    update_model)
+from .utils import (
+    ReplayBuffer,
+    plot_results,
+    save_final_results,
+    save_states_q_values_actions,
+    save_validation,
+    select_action,
+    target_hard_update,
+    update_epsilon,
+    update_model,
+)
 
 
 class LSTM(torch.nn.Module):
@@ -27,9 +34,9 @@ class LSTM(torch.nn.Module):
         self,
         entities: list,
         relations: list,
-        hidden_size: int = 64,
         num_layers: int = 2,
         embedding_dim: int = 64,
+        hidden_size: int = 64,
         bidirectional: bool = False,
         device: str = "cpu",
     ) -> None:
@@ -38,9 +45,9 @@ class LSTM(torch.nn.Module):
         Args:
             entities: List of entities.
             relations: List of relations.
-            hidden_size: Hidden size of the LSTM.
             num_layers: Number of layers in the LSTM.
             embedding_dim: Dimension of the embeddings.
+            hidden_size: Hidden size of the LSTM.
             bidirectional: Whether the LSTM is bidirectional.
             device: Device to use.
 
@@ -116,7 +123,9 @@ class LSTM(torch.nn.Module):
 
         return final_embedding
 
-    def forward(self, x: np.ndarray, memory_types: None = None) -> torch.Tensor:
+    def forward(
+        self, x: np.ndarray, memory_types: None = None
+    ) -> tuple[torch.Tensor, None]:
         """Forward pass.
 
         Args:
@@ -124,6 +133,7 @@ class LSTM(torch.nn.Module):
 
         Returns:
             lstm_out: LSTM last hidden state.
+            None: This is for compatibility with the DQN agent.
 
         """
         obs_pad = ["<PAD>", "<PAD>", "<PAD>", "<PAD>"]
@@ -148,10 +158,10 @@ class LSTM(torch.nn.Module):
 
         batch_embeddings = torch.stack(batch_embeddings)
 
-        lstm_out, _ = self.lstm(batch_embeddings)
+        lstm_out = self.lstm(batch_embeddings)[0]
         lstm_out = lstm_out[:, -1, :]
 
-        return lstm_out
+        return lstm_out, None
 
 
 class MLP(torch.nn.Module):
@@ -368,9 +378,9 @@ class DQNLSTMMLPBaselineAgent:
         gamma: float = 0.9,
         history_block_size: int = 4,
         lstm_params: dict = {
-            "hidden_size": 64,
             "num_layers": 2,
             "embedding_dim": 64,
+            "hidden_size": 64,
             "bidirectional": False,
         },
         mlp_params: dict = {
@@ -378,8 +388,9 @@ class DQNLSTMMLPBaselineAgent:
             "num_hidden_layers": 1,
             "dueling_dqn": True,
         },
-        num_samples_for_results: int = 10,
-        plotting_interval: int = 10,
+        num_samples_for_results: dict = {"val": 10, "test": 10},
+        validation_interval: int = 1,
+        plotting_interval: int = 20,
         train_seed: int = 5,
         test_seed: int = 0,
         device: str = "cpu",
@@ -414,6 +425,7 @@ class DQNLSTMMLPBaselineAgent:
             lstm_params: LSTM parameters.
             mlp_params: MLP parameters.
             num_samples_for_results: Number of samples to use for results.
+            validation_interval: Validation interval.
             plotting_interval: Plotting interval.
             train_seed: Train seed.
             test_seed: Test seed.
@@ -438,6 +450,7 @@ class DQNLSTMMLPBaselineAgent:
         self.env_config["seed"] = self.train_seed
         self.env_str = env_str
         self.num_samples_for_results = num_samples_for_results
+        self.validation_interval = validation_interval
         self.env = gym.make(self.env_str, **self.env_config)
 
         self.run_handcrafted_baselines = run_handcrafted_baselines
@@ -690,8 +703,17 @@ class DQNLSTMMLPBaselineAgent:
 
                 self.scores["train"].append(score)
                 score = 0
-                with torch.no_grad():
-                    self.validate()
+
+                if (
+                    self.iteration_idx
+                    % (
+                        self.validation_interval
+                        * (self.env_config["terminates_at"] + 1)
+                    )
+                    == 0
+                ):
+                    with torch.no_grad():
+                        self.validate()
 
             if not new_episode_starts:
                 loss = update_model(
@@ -756,7 +778,7 @@ class DQNLSTMMLPBaselineAgent:
         q_values_local = []
         actions_local = []
 
-        for idx in range(self.num_samples_for_results):
+        for idx in range(self.num_samples_for_results[val_or_test]):
             new_episode_starts = True
             score = 0
             while True:
@@ -776,7 +798,7 @@ class DQNLSTMMLPBaselineAgent:
                         self.history.add_block(observations["room"])
                     score += reward
 
-                    if idx == self.num_samples_for_results - 1:
+                    if idx == self.num_samples_for_results[val_or_test] - 1:
                         states_local.append(state)
                         q_values_local.append(q_values)
                         self.q_values[val_or_test].append(q_values)
@@ -801,6 +823,7 @@ class DQNLSTMMLPBaselineAgent:
             scores=self.scores,
             default_root_dir=self.default_root_dir,
             num_validation=self.num_validation,
+            validation_interval=self.validation_interval,
             val_dir_names=self.val_dir_names,
             lstm=self.lstm,
             mlp=self.mlp,

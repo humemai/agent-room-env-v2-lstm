@@ -442,7 +442,7 @@ class PPOLSTMBaselineAgent:
             "max_strength": 100,
         },
         run_test: bool = True,
-        num_samples_for_results: int = 10,
+        num_samples_for_results: dict = {"val": 10, "test": 10},
         train_seed: int = 5,
         test_seed: int = 0,
         device: str = "cpu",
@@ -840,8 +840,8 @@ class PPOLSTMBaselineAgent:
         """
         scores = []
 
-        for idx in range(self.num_samples_for_results):
-            if idx == self.num_samples_for_results - 1:
+        for idx in range(self.num_samples_for_results[val_or_test]):
+            if idx == self.num_samples_for_results[val_or_test] - 1:
                 save_results = True
             else:
                 save_results = False

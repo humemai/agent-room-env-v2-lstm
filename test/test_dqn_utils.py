@@ -10,7 +10,7 @@ class TestReplayBuffer(unittest.TestCase):
     def setUp(self):
         self.observation_type = "dict"
         self.size = 100
-        self.batch_size = 32
+        self.batch_size = 64
         self.buffer = ReplayBuffer(
             self.observation_type, size=self.size, batch_size=self.batch_size
         )

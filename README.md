@@ -51,11 +51,17 @@ Contributions are what make the open source community such an amazing place to b
 1. Push to the Branch (`git push origin feature/AmazingFeature`)
 1. Open a Pull Request
 
-## [Cite our paper](<>)
+## [Cite our paper]()
 
 ```bibtex
 
 ```
+
+## TODOs
+
+<!-- 1. random removal when full -->
+<!-- 1. not when "is full" but "can be added" -->
+<!-- 2. semantic decaying factor -->
 
 ## Authors
 

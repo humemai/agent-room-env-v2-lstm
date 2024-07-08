@@ -133,6 +133,6 @@ class TestLSTM(unittest.TestCase):
             ],
         }
 
-        output = self.lstm_dict_entities.forward(x, memory_types)
+        output = self.lstm_dict_entities.forward(x, memory_types)[0]
         self.assertIsInstance(output, torch.Tensor)
         self.assertEqual(output.shape, torch.Size([batch_size, self.hidden_size]))

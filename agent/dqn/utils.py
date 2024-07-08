@@ -9,8 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
-from humemai.utils import (argmax, is_running_notebook, list_duplicates_of,
-                           write_yaml)
+from humemai.utils import argmax, is_running_notebook, list_duplicates_of, write_yaml
 from IPython.display import clear_output
 from tqdm.auto import tqdm
 
@@ -402,16 +401,18 @@ def compute_loss(
 
     # G_t   = r + gamma * v(s_{t+1})  if state != Terminal
     #       = r                       otherwise
-    curr_q_value = mlp(lstm(state, memory_types)).gather(1, action)
+    curr_q_value = mlp(lstm(state, memory_types)[0]).gather(1, action)
     if ddqn:
         next_q_value = (
-            mlp_target(lstm_target(next_state, memory_types))
-            .gather(1, mlp(lstm(next_state, memory_types)).argmax(dim=1, keepdim=True))
+            mlp_target(lstm_target(next_state, memory_types)[0])
+            .gather(
+                1, mlp(lstm(next_state, memory_types)[0]).argmax(dim=1, keepdim=True)
+            )
             .detach()
         )
     else:
         next_q_value = (
-            mlp_target(lstm_target(next_state, memory_types))
+            mlp_target(lstm_target(next_state, memory_types)[0])
             .max(dim=1, keepdim=True)[0]
             .detach()
         )
@@ -450,7 +451,7 @@ def select_action(
         q_values: a list of q values for each action.
 
     """
-    q_values = mlp(lstm(np.array([state]), memory_types)).detach().cpu().tolist()[0]
+    q_values = mlp(lstm(np.array([state]), memory_types)[0]).detach().cpu().tolist()[0]
 
     if greedy or epsilon < np.random.random():
         selected_action = argmax(q_values)
@@ -508,6 +509,7 @@ def save_validation(
     scores: dict,
     default_root_dir: str,
     num_validation: int,
+    validation_interval: int,
     val_dir_names: list,
     lstm: torch.nn.Module,
     mlp: torch.nn.Module,
@@ -520,6 +522,7 @@ def save_validation(
         scores: a dictionary of scores for train, validation, and test.
         default_root_dir: the root directory where the results are saved.
         num_validation: the current validation episode.
+        validation_interval: the interval to validate the model.
         val_dir_names: a list of dirnames for the validation models.
         lstm: the lstm model.
         mlp: the mlp model.
@@ -542,7 +545,9 @@ def save_validation(
     torch.save(mlp.state_dict(), os.path.join(dir_name, "mlp.pt"))
 
     val_dir_names.append(dir_name)
-    scores["val"].append(scores_temp)
+
+    for _ in range(validation_interval):
+        scores["val"].append(scores_temp)
 
     scores_to_compare = []
     for dir_name in val_dir_names:
