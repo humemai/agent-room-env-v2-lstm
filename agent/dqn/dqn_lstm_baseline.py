@@ -838,7 +838,7 @@ class DQNLSTMMLPBaselineAgent:
             self.num_validation,
         )
         self.env.close()
-        self.num_validation += 1
+        self.num_validation += self.validation_interval
 
         self.lstm.train()
         self.mlp.train()

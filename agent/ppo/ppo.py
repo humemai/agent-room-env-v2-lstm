@@ -299,7 +299,7 @@ class PPOAgent(HandcraftedAgent):
         )
 
         self.env.close()
-        self.num_validation += 1
+        self.num_validation += self.validation_interval
         self.actor.train()
         self.critic.train()
 
