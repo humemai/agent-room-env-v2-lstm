@@ -417,11 +417,7 @@ class DQNAgent:
             self.action2str["mm"][action],
             split_possessive=False,
         )
-        if (
-            hasattr(self.memory_systems, "semantic")
-            and self.memory_systems.semantic.capacity > 0
-        ):
-            self.memory_systems.semantic.decay()
+
         action_explore = explore(self.memory_systems, self.explore_policy_heuristic)
         answers = [
             answer_question(
@@ -437,6 +433,12 @@ class DQNAgent:
             truncated,
             info,
         ) = self.env.step(action_pair)
+        if (
+            hasattr(self.memory_systems, "semantic")
+            and self.memory_systems.semantic.capacity > 0
+        ):
+            self.memory_systems.semantic.decay()
+            self.num_semantic_decayed
         done = done or truncated
 
         return observations, action, reward, done, q_values
@@ -457,6 +459,7 @@ class DQNAgent:
 
             if new_episode_starts:
                 self.init_memory_systems()
+                self.num_semantic_decayed = 0
                 observations, info = self.env.reset()
                 done = False
                 remaining = self.process_first_observation(observations["room"])
@@ -507,6 +510,7 @@ class DQNAgent:
         while True:
             if new_episode_starts:
                 self.init_memory_systems()
+                self.num_semantic_decayed = 0
                 observations, info = self.env.reset()
                 done = False
                 remaining = self.process_first_observation(observations["room"])
@@ -623,6 +627,7 @@ class DQNAgent:
             while True:
                 if new_episode_starts:
                     self.init_memory_systems()
+                    self.num_semantic_decayed = 0
                     observations, info = self.env.reset()
                     done = False
                     remaining = self.process_first_observation(observations["room"])
@@ -774,6 +779,7 @@ class DQNAgent:
 
         self.plot_results(policy_type, "all", save_fig=True)
         self.env.close()
+        print(f"num_semantic_decayed: {self.num_semantic_decayed}")
 
     def process_room_observations(self, observations_room: list):
         """Process room observations. This is used when training an exploration policy.
@@ -803,11 +809,6 @@ class DQNAgent:
                 policy=self.action2str["mm"][action],
                 split_possessive=False,
             )
-        if (
-            hasattr(self.memory_systems, "semantic")
-            and self.memory_systems.semantic.capacity > 0
-        ):
-            self.memory_systems.semantic.decay()
 
     def step_explore(
         self, state: dict, questions: list, greedy: bool
@@ -854,6 +855,12 @@ class DQNAgent:
             truncated,
             info,
         ) = self.env.step(action_pair)
+        if (
+            hasattr(self.memory_systems, "semantic")
+            and self.memory_systems.semantic.capacity > 0
+        ):
+            self.memory_systems.semantic.decay()
+            self.num_semantic_decayed += 1
         done = done or truncated
 
         return observations, action, reward, done, q_values
@@ -875,6 +882,7 @@ class DQNAgent:
 
             if new_episode_starts:
                 self.init_memory_systems()
+                self.num_semantic_decayed = 0
                 observations, info = self.env.reset()
                 done = False
                 self.process_room_observations(observations["room"])
@@ -935,6 +943,7 @@ class DQNAgent:
         while True:
             if new_episode_starts:
                 self.init_memory_systems()
+                self.num_semantic_decayed = 0
                 observations, info = self.env.reset()
                 done = False
                 self.process_room_observations(observations["room"])
@@ -1040,6 +1049,7 @@ class DQNAgent:
             while True:
                 if new_episode_starts:
                     self.init_memory_systems()
+                    self.num_semantic_decayed = 0
                     observations, info = self.env.reset()
                     done = False
                     self.process_room_observations(observations["room"])

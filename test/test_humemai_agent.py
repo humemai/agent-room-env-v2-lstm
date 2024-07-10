@@ -19,7 +19,7 @@ class DQNAgentTest(unittest.TestCase):
         params_all = []
         room_size = "s"
         for capacity_max in [2, 4]:
-            for test_seed in range(1):
+            for semantic_decay_factor in [0.5, 1.0]:
                 num_iterations = 10 * 2
                 batch_size = 2
                 question_interval = 2
@@ -55,6 +55,7 @@ class DQNAgentTest(unittest.TestCase):
                         "gamma": {"mm": 0.99, "explore": 0.9},
                         "capacity": capacity,
                         "pretrain_semantic": False,
+                        "semantic_decay_factor": semantic_decay_factor,
                         "lstm_params": {
                             "hidden_size": 2,
                             "num_layers": 1,
@@ -70,8 +71,8 @@ class DQNAgentTest(unittest.TestCase):
                         },
                         "num_samples_for_results": {"val": 10, "test": 10},
                         "plotting_interval": 20,
-                        "train_seed": test_seed + 5,
-                        "test_seed": test_seed,
+                        "train_seed": 5,
+                        "test_seed": 0,
                         "device": "cpu",
                         "qa_function": "episodic_semantic",
                         "explore_policy_heuristic": "avoid_walls",
@@ -94,4 +95,11 @@ class DQNAgentTest(unittest.TestCase):
         for params in tqdm(params_all):
             agent = DQNAgent(**params)
             agent.train()
+            if (
+                hasattr(agent.memory_systems, "semantic")
+                and agent.memory_systems.semantic.capacity > 0
+            ):
+                self.assertEqual(agent.num_semantic_decayed, terminates_at + 1)
+            else:
+                self.assertEqual(agent.num_semantic_decayed, 0)
             agent.remove_results_from_disk()

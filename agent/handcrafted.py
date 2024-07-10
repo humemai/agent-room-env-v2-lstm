@@ -124,6 +124,7 @@ class HandcraftedAgent:
             action_pair = ([], None)
             done = False
             self.init_memory_systems()
+            self.num_semantic_decayed = 0
 
             while not done:
                 if env_started:
@@ -134,7 +135,15 @@ class HandcraftedAgent:
                         truncated,
                         info,
                     ) = self.env.step(action_pair)
+                    if (
+                        hasattr(self.memory_systems, "semantic")
+                        and self.memory_systems.semantic.capacity > 0
+                    ):
+                        self.memory_systems.semantic.decay()
+                        self.num_semantic_decayed += 1
+
                     score += reward
+
                     if done:
                         break
 
@@ -149,12 +158,6 @@ class HandcraftedAgent:
                         self.mm_policy,
                         split_possessive=False,
                     )
-                if (
-                    hasattr(self.memory_systems, "semantic")
-                    and self.memory_systems.semantic.capacity > 0
-                ):
-                    self.memory_systems.semantic.decay()
-
                 actions_qa = [
                     str(
                         answer_question(
