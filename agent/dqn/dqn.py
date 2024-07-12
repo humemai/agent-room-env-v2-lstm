@@ -48,6 +48,7 @@ class DQNAgent:
         env_str: str = "room_env:RoomEnv-v2",
         num_iterations: int = 10000,
         replay_buffer_size: int = 10000,
+        validation_starts_at: int = 5000,
         warm_start: int = 1000,
         batch_size: int = 32,
         target_update_interval: int = 10,
@@ -106,6 +107,7 @@ class DQNAgent:
             env_str: environment string. This has to be "room_env:RoomEnv-v2"
             num_iterations: number of iterations to train
             replay_buffer_size: size of replay buffer
+            validation_starts_at: from which iteration to start validation
             warm_start: number of steps to fill the replay buffer, before training
             batch_size: This is the amount of samples sampled from the replay buffer.
             target_update_interval: interval to update target network
@@ -199,6 +201,7 @@ class DQNAgent:
         self.plotting_interval = plotting_interval
 
         self.replay_buffer_size = replay_buffer_size
+        self.validation_starts_at = validation_starts_at
         self.batch_size = batch_size
         self.max_epsilon = max_epsilon
         self.min_epsilon = min_epsilon
@@ -256,6 +259,17 @@ class DQNAgent:
             "mm": {"train": [], "val": [], "test": None},
             "explore": {"train": [], "val": [], "test": None},
         }
+        if self.validation_starts_at > 0:
+            for _ in range(
+                self.validation_starts_at // (self.env_config["terminates_at"] + 1)
+                - self.validation_interval
+            ):
+                self.scores["mm"]["val"].append(
+                    [0] * self.num_samples_for_results["val"]
+                )
+                self.scores["explore"]["val"].append(
+                    [0] * self.num_samples_for_results["val"]
+                )
 
     def _create_directory(self, params_to_save: dict) -> None:
         """Create the directory to store the results."""
@@ -278,9 +292,13 @@ class DQNAgent:
         """Remove the results from the disk."""
         shutil.rmtree(self.default_root_dir)
 
-    def init_memory_systems(self) -> None:
+    def init_memory_systems(self, reset_semantic_decay: bool = False) -> None:
         """Initialize the agent's memory systems. This has nothing to do with the
-        replay buffer."""
+        replay buffer.
+
+        Args:
+            reset_semantic_decay: whether to reset the semantic memory system's decay
+        """
         self.memory_systems = MemorySystems(
             episodic=EpisodicMemory(capacity=self.capacity["episodic"]),
             semantic=SemanticMemory(
@@ -304,6 +322,8 @@ class DQNAgent:
                 return_remaining_space=False,
                 freeze=False,
             )
+        if reset_semantic_decay:
+            self.num_semantic_decayed = 0
 
     def get_deepcopied_memory_state(self) -> dict:
         """Get a deepcopied memory state.
@@ -403,7 +423,7 @@ class DQNAgent:
 
         """
         # select memory management action
-        action, q_values = select_action(
+        action_mm, q_values = select_action(
             memory_types=self.memory_types["mm"],
             state=state,
             greedy=greedy,
@@ -414,7 +434,7 @@ class DQNAgent:
         )
         manage_memory(
             self.memory_systems,
-            self.action2str["mm"][action],
+            self.action2str["mm"][action_mm],
             split_possessive=False,
         )
 
@@ -425,23 +445,22 @@ class DQNAgent:
             )
             for q in questions
         ]
-        action_pair = (answers, action_explore)
         (
             observations,
             reward,
             done,
             truncated,
             info,
-        ) = self.env.step(action_pair)
+        ) = self.env.step((answers, action_explore))
         if (
             hasattr(self.memory_systems, "semantic")
             and self.memory_systems.semantic.capacity > 0
         ):
             self.memory_systems.semantic.decay()
-            self.num_semantic_decayed
+            self.num_semantic_decayed += 1
         done = done or truncated
 
-        return observations, action, reward, done, q_values
+        return observations, action_mm, reward, done, q_values
 
     def fill_replay_buffer_mm(self) -> None:
         """Make the replay buffer full in the beginning with the uniformly-sampled
@@ -458,8 +477,7 @@ class DQNAgent:
         while len(self.replay_buffer) < self.warm_start:
 
             if new_episode_starts:
-                self.init_memory_systems()
-                self.num_semantic_decayed = 0
+                self.init_memory_systems(reset_semantic_decay=True)
                 observations, info = self.env.reset()
                 done = False
                 remaining = self.process_first_observation(observations["room"])
@@ -496,7 +514,6 @@ class DQNAgent:
         )
 
         self.fill_replay_buffer_mm()
-        self.num_validation = 0
         self.epsilon = self.max_epsilon
 
         self.lstm_mm.train()
@@ -509,8 +526,7 @@ class DQNAgent:
 
         while True:
             if new_episode_starts:
-                self.init_memory_systems()
-                self.num_semantic_decayed = 0
+                self.init_memory_systems(reset_semantic_decay=True)
                 observations, info = self.env.reset()
                 done = False
                 remaining = self.process_first_observation(observations["room"])
@@ -530,18 +546,22 @@ class DQNAgent:
 
             if done:
                 new_episode_starts = True
-
+                if (
+                    hasattr(self.memory_systems, "semantic")
+                    and self.memory_systems.semantic.capacity > 0
+                ):
+                    assert (
+                        self.num_semantic_decayed
+                        == self.env_config["terminates_at"] + 1
+                    )
                 self.scores["mm"]["train"].append(score)
                 score = 0
 
                 if (
-                    self.iteration_idx
-                    % (
-                        self.validation_interval
-                        * (self.env_config["terminates_at"] + 1)
-                    )
-                    == 0
-                ):
+                    self.iteration_idx >= self.validation_starts_at
+                ) and self.iteration_idx % (
+                    self.validation_interval * (self.env_config["terminates_at"] + 1)
+                ) == 0:
                     with torch.no_grad():
                         self.validate(self.lstm_mm, self.mlp_mm, "mm")
 
@@ -626,8 +646,7 @@ class DQNAgent:
             score = 0
             while True:
                 if new_episode_starts:
-                    self.init_memory_systems()
-                    self.num_semantic_decayed = 0
+                    self.init_memory_systems(reset_semantic_decay=True)
                     observations, info = self.env.reset()
                     done = False
                     remaining = self.process_first_observation(observations["room"])
@@ -648,6 +667,14 @@ class DQNAgent:
                         actions_local.append(action)
 
                 if done:
+                    if (
+                        hasattr(self.memory_systems, "semantic")
+                        and self.memory_systems.semantic.capacity > 0
+                    ):
+                        assert (
+                            self.num_semantic_decayed
+                            == self.env_config["terminates_at"] + 1
+                        )
                     break
 
                 else:
@@ -681,7 +708,6 @@ class DQNAgent:
         """
         lstm.eval()
         mlp.eval()
-        self.num_validation += self.validation_interval
 
         if policy_type == "mm":
             middle_function = self.validate_test_middle_mm
@@ -692,12 +718,14 @@ class DQNAgent:
 
         scores_temp, states, q_values, actions = middle_function("val")
 
+        num_episodes = self.iteration_idx // (self.env_config["terminates_at"] + 1)
+
         save_validation(
             policy=policy_type,
             scores_temp=scores_temp,
             scores=self.scores[policy_type],
             default_root_dir=self.default_root_dir,
-            num_validation=self.num_validation,
+            num_episodes=num_episodes,
             validation_interval=self.validation_interval,
             val_dir_names=self.val_dir_names[policy_type],
             lstm=lstm,
@@ -710,7 +738,7 @@ class DQNAgent:
             actions,
             self.default_root_dir,
             "val",
-            self.num_validation,
+            num_episodes,
         )
         self.env.close()
         lstm.train()
@@ -737,7 +765,10 @@ class DQNAgent:
         self.env_config["seed"] = self.test_seed
         self.env = gym.make(self.env_str, **self.env_config)
 
-        assert len(self.val_dir_names[policy_type]) == 1
+        assert (
+            len(self.val_dir_names[policy_type]) == 1
+        ), f"{len(self.val_dir_names[policy_type])} should be 1"
+
         lstm.load_state_dict(
             torch.load(os.path.join(self.val_dir_names[policy_type][0], "lstm.pt"))
         )
@@ -779,7 +810,6 @@ class DQNAgent:
 
         self.plot_results(policy_type, "all", save_fig=True)
         self.env.close()
-        print(f"num_semantic_decayed: {self.num_semantic_decayed}")
 
     def process_room_observations(self, observations_room: list):
         """Process room observations. This is used when training an exploration policy.
@@ -831,7 +861,7 @@ class DQNAgent:
 
         """
         # select explore action
-        action, q_values = select_action(
+        action_explore, q_values = select_action(
             memory_types=self.memory_types["explore"],
             state=state,
             greedy=greedy,
@@ -847,14 +877,13 @@ class DQNAgent:
             for q in questions
         ]
 
-        action_pair = (answers, self.action2str["explore"][action])
         (
             observations,
             reward,
             done,
             truncated,
             info,
-        ) = self.env.step(action_pair)
+        ) = self.env.step((answers, self.action2str["explore"][action_explore]))
         if (
             hasattr(self.memory_systems, "semantic")
             and self.memory_systems.semantic.capacity > 0
@@ -863,7 +892,7 @@ class DQNAgent:
             self.num_semantic_decayed += 1
         done = done or truncated
 
-        return observations, action, reward, done, q_values
+        return observations, action_explore, reward, done, q_values
 
     def fill_replay_buffer_explore(self) -> None:
         """Make the replay buffer full in the beginning with the uniformly-sampled
@@ -881,8 +910,7 @@ class DQNAgent:
         while len(self.replay_buffer) < self.warm_start:
 
             if new_episode_starts:
-                self.init_memory_systems()
-                self.num_semantic_decayed = 0
+                self.init_memory_systems(reset_semantic_decay=True)
                 observations, info = self.env.reset()
                 done = False
                 self.process_room_observations(observations["room"])
@@ -929,7 +957,6 @@ class DQNAgent:
         )
 
         self.fill_replay_buffer_explore()
-        self.num_validation = 0
         self.epsilon = self.max_epsilon
 
         self.lstm_explore.train()
@@ -942,8 +969,7 @@ class DQNAgent:
 
         while True:
             if new_episode_starts:
-                self.init_memory_systems()
-                self.num_semantic_decayed = 0
+                self.init_memory_systems(reset_semantic_decay=True)
                 observations, info = self.env.reset()
                 done = False
                 self.process_room_observations(observations["room"])
@@ -963,18 +989,23 @@ class DQNAgent:
 
             if done:
                 new_episode_starts = True
+                if (
+                    hasattr(self.memory_systems, "semantic")
+                    and self.memory_systems.semantic.capacity > 0
+                ):
+                    assert (
+                        self.num_semantic_decayed
+                        == self.env_config["terminates_at"] + 1
+                    )
 
                 self.scores["explore"]["train"].append(score)
                 score = 0
 
                 if (
-                    self.iteration_idx
-                    % (
-                        self.validation_interval
-                        * (self.env_config["terminates_at"] + 1)
-                    )
-                    == 0
-                ):
+                    self.iteration_idx >= self.validation_starts_at
+                ) and self.iteration_idx % (
+                    self.validation_interval * (self.env_config["terminates_at"] + 1)
+                ) == 0:
                     with torch.no_grad():
                         self.validate(self.lstm_explore, self.mlp_explore, "explore")
 
@@ -1048,8 +1079,7 @@ class DQNAgent:
             score = 0
             while True:
                 if new_episode_starts:
-                    self.init_memory_systems()
-                    self.num_semantic_decayed = 0
+                    self.init_memory_systems(reset_semantic_decay=True)
                     observations, info = self.env.reset()
                     done = False
                     self.process_room_observations(observations["room"])
@@ -1071,6 +1101,14 @@ class DQNAgent:
                         actions_local.append(action)
 
                 if done:
+                    if (
+                        hasattr(self.memory_systems, "semantic")
+                        and self.memory_systems.semantic.capacity > 0
+                    ):
+                        assert (
+                            self.num_semantic_decayed
+                            == self.env_config["terminates_at"] + 1
+                        )
                     break
 
             scores_local.append(score)
@@ -1084,7 +1122,17 @@ class DQNAgent:
 
         """
         self.train_mm()
+        if (
+            hasattr(self.memory_systems, "semantic")
+            and self.memory_systems.semantic.capacity > 0
+        ):
+            assert self.num_semantic_decayed == self.env_config["terminates_at"] + 1
         self.train_explore()
+        if (
+            hasattr(self.memory_systems, "semantic")
+            and self.memory_systems.semantic.capacity > 0
+        ):
+            assert self.num_semantic_decayed == self.env_config["terminates_at"] + 1
 
     def plot_results(
         self,

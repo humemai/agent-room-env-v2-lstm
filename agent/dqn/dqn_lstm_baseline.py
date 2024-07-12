@@ -369,6 +369,7 @@ class DQNLSTMMLPBaselineAgent:
         env_str: str = "room_env:RoomEnv-v2",
         num_iterations: int = 10000,
         replay_buffer_size: int = 10000,
+        validation_starts_at: int = 5000,
         warm_start: int = 1000,
         batch_size: int = 32,
         target_update_interval: int = 10,
@@ -414,6 +415,7 @@ class DQNLSTMMLPBaselineAgent:
             env_str: Environment string.
             num_iterations: Number of iterations.
             replay_buffer_size: Size of the replay buffer.
+            validation_starts_at: validation_starts_at
             warm_start: Warm start size.
             batch_size: Batch size.
             target_update_interval: Target update interval.
@@ -468,6 +470,7 @@ class DQNLSTMMLPBaselineAgent:
         self.plotting_interval = plotting_interval
 
         self.replay_buffer_size = replay_buffer_size
+        self.validation_starts_at = validation_starts_at
         self.batch_size = batch_size
         self.epsilon = max_epsilon
         self.max_epsilon = max_epsilon
@@ -664,11 +667,17 @@ class DQNLSTMMLPBaselineAgent:
     def train(self) -> None:
         """Train the explore agent."""
         self.fill_replay_buffer()  # fill up the buffer till warm start size
-        self.num_validation = 0
 
         self.epsilons = []
         self.training_loss = []
         self.scores = {"train": [], "val": [], "test": None}
+
+        if self.validation_starts_at > 0:
+            for _ in range(
+                self.validation_starts_at // (self.env_config["terminates_at"] + 1)
+                - self.validation_interval
+            ):
+                self.scores["val"].append([0] * self.num_samples_for_results["val"])
 
         self.lstm.train()
         self.mlp.train()
@@ -705,13 +714,10 @@ class DQNLSTMMLPBaselineAgent:
                 score = 0
 
                 if (
-                    self.iteration_idx
-                    % (
-                        self.validation_interval
-                        * (self.env_config["terminates_at"] + 1)
-                    )
-                    == 0
-                ):
+                    self.iteration_idx >= self.validation_starts_at
+                ) and self.iteration_idx % (
+                    self.validation_interval * (self.env_config["terminates_at"] + 1)
+                ) == 0:
                     with torch.no_grad():
                         self.validate()
 
@@ -817,12 +823,14 @@ class DQNLSTMMLPBaselineAgent:
         self.mlp.eval()
         scores_temp, states, q_values, actions = self.validate_test_middle("val")
 
+        num_episodes = self.iteration_idx // (self.env_config["terminates_at"] + 1)
+
         save_validation(
             policy=None,
             scores_temp=scores_temp,
             scores=self.scores,
             default_root_dir=self.default_root_dir,
-            num_validation=self.num_validation,
+            num_episodes=num_episodes,
             validation_interval=self.validation_interval,
             val_dir_names=self.val_dir_names,
             lstm=self.lstm,
@@ -835,10 +843,9 @@ class DQNLSTMMLPBaselineAgent:
             actions,
             self.default_root_dir,
             "val",
-            self.num_validation,
+            num_episodes,
         )
         self.env.close()
-        self.num_validation += self.validation_interval
 
         self.lstm.train()
         self.mlp.train()
@@ -858,7 +865,7 @@ class DQNLSTMMLPBaselineAgent:
         self.env_config["seed"] = self.test_seed
         self.env = gym.make(self.env_str, **self.env_config)
 
-        assert len(self.val_dir_names) == 1
+        assert len(self.val_dir_names) == 1, f"{len(self.val_dir_names)} is not 1!"
 
         self.lstm.load_state_dict(
             torch.load(os.path.join(self.val_dir_names[0], "lstm.pt"))

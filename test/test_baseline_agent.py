@@ -18,6 +18,7 @@ class DQNLSTMMLPBaselineAgentTest(unittest.TestCase):
             "env_str": "room_env:RoomEnv-v2",
             "num_iterations": 10,
             "replay_buffer_size": 10,
+            "validation_starts_at": 5,
             "warm_start": 5,
             "batch_size": 2,
             "target_update_interval": 10,

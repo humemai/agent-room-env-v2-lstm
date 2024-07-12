@@ -508,7 +508,7 @@ def save_validation(
     scores_temp: list,
     scores: dict,
     default_root_dir: str,
-    num_validation: int,
+    num_episodes: int,
     validation_interval: int,
     val_dir_names: list,
     lstm: torch.nn.Module,
@@ -521,7 +521,7 @@ def save_validation(
         scores_temp: a list of validation scores for the current validation episode.
         scores: a dictionary of scores for train, validation, and test.
         default_root_dir: the root directory where the results are saved.
-        num_validation: the current validation episode.
+        num_episodes: number of episodes run so far
         validation_interval: the interval to validate the model.
         val_dir_names: a list of dirnames for the validation models.
         lstm: the lstm model.
@@ -537,7 +537,7 @@ def save_validation(
     dir_name = os.path.join(
         default_root_dir,
         subdir,
-        f"episode={num_validation}_val-score={mean_score}",
+        f"episode={num_episodes}_val-score={mean_score}",
     )
 
     os.makedirs(dir_name, exist_ok=True)
@@ -570,7 +570,7 @@ def save_states_q_values_actions(
     actions: list,
     default_root_dir: str,
     val_or_test: str,
-    num_validation: int | None = None,
+    num_episodes: int | None = None,
 ) -> None:
     """Save states, q_values, and actions.
 
@@ -581,13 +581,13 @@ def save_states_q_values_actions(
         actions: a list of actions.
         default_root_dir: the root directory where the results are saved.
         val_or_test: "val" or "test"
-        num_validation: the current validation episode.
+        num_episodes: the number of episodes run so far.
 
     """
 
     subdir = policy if policy is not None else ""
     filename_template = (
-        f"states_q_values_actions_val_episode={num_validation}.yaml"
+        f"states_q_values_actions_val_episode={num_episodes}.yaml"
         if val_or_test.lower() == "val"
         else "states_q_values_actions_test.yaml"
     )

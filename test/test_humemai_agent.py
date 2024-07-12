@@ -46,6 +46,7 @@ class DQNAgentTest(unittest.TestCase):
                         "env_str": "room_env:RoomEnv-v2",
                         "num_iterations": num_iterations,
                         "replay_buffer_size": num_iterations,
+                        "validation_starts_at": num_iterations // 2,
                         "warm_start": num_iterations // 10,
                         "batch_size": batch_size,
                         "target_update_interval": 10,
