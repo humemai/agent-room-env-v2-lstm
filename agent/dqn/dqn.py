@@ -310,13 +310,14 @@ class DQNAgent:
 
         assert self.pretrain_semantic in [False, "exclude_walls", "include_walls"]
         if self.pretrain_semantic in ["exclude_walls", "include_walls"]:
+            assert self.capacity["semantic"] > 0
+
             if self.pretrain_semantic == "exclude_walls":
                 exclude_walls = True
             else:
                 exclude_walls = False
             room_layout = self.env.unwrapped.return_room_layout(exclude_walls)
 
-            assert self.capacity["semantic"] > 0
             _ = self.memory_systems.semantic.pretrain_semantic(
                 semantic_knowledge=room_layout,
                 return_remaining_space=False,

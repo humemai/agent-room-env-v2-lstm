@@ -42,7 +42,7 @@ class HandcraftedAgent:
             "episodic_semantic", "episodic", "semantic", "random"
         ] = "episodic_semantic",
         explore_policy: Literal["random", "avoid_walls"] = "avoid_walls",
-        num_samples_for_results: int = 3,
+        num_samples_for_results: int = 10,
         capacity: dict = {
             "episodic": 12,
             "semantic": 12,
@@ -113,82 +113,14 @@ class HandcraftedAgent:
         """Remove the results from the disk."""
         shutil.rmtree(self.default_root_dir)
 
-    def test(self):
-        """Test the agent. There is no training for this agent, since it is
-        handcrafted."""
-        self.scores = []
-
-        for _ in range(self.num_samples_for_results):
-            score = 0
-            env_started = False
-            action_pair = ([], None)
-            done = False
-            self.init_memory_systems()
-            self.num_semantic_decayed = 0
-
-            while not done:
-                if env_started:
-                    (
-                        observations,
-                        reward,
-                        done,
-                        truncated,
-                        info,
-                    ) = self.env.step(action_pair)
-                    if (
-                        hasattr(self.memory_systems, "semantic")
-                        and self.memory_systems.semantic.capacity > 0
-                    ):
-                        self.memory_systems.semantic.decay()
-                        self.num_semantic_decayed += 1
-
-                    score += reward
-
-                    if done:
-                        break
-
-                else:
-                    observations, info = self.env.reset()
-                    env_started = True
-
-                for obs in observations["room"]:
-                    encode_observation(self.memory_systems, obs)
-                    manage_memory(
-                        self.memory_systems,
-                        self.mm_policy,
-                        split_possessive=False,
-                    )
-                actions_qa = [
-                    str(
-                        answer_question(
-                            self.memory_systems,
-                            self.qa_function,
-                            question,
-                            split_possessive=False,
-                        )
-                    )
-                    for question in observations["questions"]
-                ]
-
-                action_explore = explore(self.memory_systems, self.explore_policy)
-                action_pair = (actions_qa, action_explore)
-            self.scores.append(score)
-
-        self.scores = {
-            "test_score": {
-                "mean": round(np.mean(self.scores).item(), 2),
-                "std": round(np.std(self.scores).item(), 2),
-            }
-        }
-        write_yaml(self.scores, os.path.join(self.default_root_dir, "results.yaml"))
-        write_yaml(
-            self.memory_systems.return_as_a_dict_list(),
-            os.path.join(self.default_root_dir, "last_memory_state.yaml"),
-        )
-
-    def init_memory_systems(self) -> None:
+    def init_memory_systems(self, reset_semantic_decay: bool = False) -> None:
         """Initialize the agent's memory systems. This has nothing to do with the
-        replay buffer."""
+        replay buffer.
+
+        Args:
+            reset_semantic_decay: whether to reset the semantic memory system's decay
+
+        """
         self.memory_systems = MemorySystems(
             episodic=EpisodicMemory(capacity=self.capacity["episodic"]),
             semantic=SemanticMemory(
@@ -220,3 +152,86 @@ class HandcraftedAgent:
                     return_remaining_space=False,
                     freeze=False,
                 )
+
+        if reset_semantic_decay:
+            self.num_semantic_decayed = 0
+
+    def test(self):
+        """Test the agent. There is no training for this agent, since it is
+        handcrafted."""
+        self.scores = []
+
+        for _ in range(self.num_samples_for_results):
+            score = 0
+            env_started = False
+            action_pair = ([], None)
+            done = False
+            self.init_memory_systems(reset_semantic_decay=True)
+
+            while not done:
+                if env_started:
+                    (
+                        observations,
+                        reward,
+                        done,
+                        truncated,
+                        info,
+                    ) = self.env.step(action_pair)
+                    if (
+                        hasattr(self.memory_systems, "semantic")
+                        and self.memory_systems.semantic.capacity > 0
+                    ):
+                        self.memory_systems.semantic.decay()
+                        self.num_semantic_decayed += 1
+
+                    score += reward
+
+                    if done:
+                        if (
+                            hasattr(self.memory_systems, "semantic")
+                            and self.memory_systems.semantic.capacity > 0
+                        ):
+                            assert (
+                                self.num_semantic_decayed
+                                == self.env_config["terminates_at"] + 1
+                            )
+                        break
+
+                else:
+                    observations, info = self.env.reset()
+                    env_started = True
+
+                for obs in observations["room"]:
+                    encode_observation(self.memory_systems, obs)
+                    manage_memory(
+                        self.memory_systems,
+                        self.mm_policy,
+                        split_possessive=False,
+                    )
+                answers = [
+                    str(
+                        answer_question(
+                            self.memory_systems,
+                            self.qa_function,
+                            question,
+                            split_possessive=False,
+                        )
+                    )
+                    for question in observations["questions"]
+                ]
+
+                action_explore = explore(self.memory_systems, self.explore_policy)
+                action_pair = (answers, action_explore)
+            self.scores.append(score)
+
+        self.scores = {
+            "test_score": {
+                "mean": round(np.mean(self.scores).item(), 2),
+                "std": round(np.std(self.scores).item(), 2),
+            }
+        }
+        write_yaml(self.scores, os.path.join(self.default_root_dir, "results.yaml"))
+        write_yaml(
+            self.memory_systems.return_as_a_dict_list(),
+            os.path.join(self.default_root_dir, "last_memory_state.yaml"),
+        )

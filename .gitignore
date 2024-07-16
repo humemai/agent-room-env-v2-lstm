@@ -163,6 +163,7 @@ cython_debug/
 lightning_logs/
 lightning_logs.zip
 training-results/
+training-results_OLD/
 
 # vscode
 .vscode/
