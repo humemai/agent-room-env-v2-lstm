@@ -21,9 +21,17 @@ This repo is to train an agent with an LSTM that interacts with the
 
 ## HumemAI Agent
 
-|       The three functions of interest        |                   DQN                    |            Memory Systems Example            |
-| :------------------------------------------: | :--------------------------------------: | :------------------------------------------: |
-| ![](./figures/humemai-architecture-lstm.png) | ![](./figures/humemai-lstm-q-values.png) | ![](./figures/memory-systems-example-xl.png) |
+|       The three functions of interest        |
+| :------------------------------------------: |
+| ![](./figures/humemai-architecture-lstm.png) |
+
+|                   DQN                    |
+| :--------------------------------------: |
+| ![](./figures/humemai-lstm-q-values.png) |
+
+|            Memory Systems Example            |
+| :------------------------------------------: |
+| ![](./figures/memory-systems-example-xl.png) |
 
 ## Training Results
 
