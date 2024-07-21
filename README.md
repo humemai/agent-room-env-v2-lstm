@@ -21,9 +21,9 @@ This repo is to train an agent with an LSTM that interacts with the
 
 ## HumemAI Agent
 
-|                   DQN                    |            Memory Systems Example            |
-| :--------------------------------------: | :------------------------------------------: |
-| ![](./figures/humemai-lstm-q-values.png) | ![](./figures/memory-systems-example-xl.png) |
+|       The three functions of interest        |                   DQN                    |            Memory Systems Example            |
+| :------------------------------------------: | :--------------------------------------: | :------------------------------------------: |
+| ![](./figures/humemai-architecture-lstm.png) | ![](./figures/humemai-lstm-q-values.png) | ![](./figures/memory-systems-example-xl.png) |
 
 ## Training Results
 
@@ -44,7 +44,7 @@ This repo is to train an agent with an LSTM that interacts with the
 | 96       | Baseline        | N/A       | 155 (±77)     |
 | 192      | Baseline        | N/A       | 144 (±68)     |
 
-Also check out [`./trained-agents/`](./trained-agents) to see the saved training
+Also check out [`./trained-results/`](./trained-results) to see the saved training
 results.
 
 ## pdoc documentation
@@ -71,20 +71,8 @@ inspire, and create. Any contributions you make are **greatly appreciated**.
 
 ```
 
-## TODOs
-
-<!-- 1. random removal when full -->
-
-<!-- 1. not when "is full" but "can be added" -->
-
-<!-- 2. semantic decaying factor -->
-
 ## Authors
 
 - [Taewoon Kim](https://taewoon.kim/)
 - [Michael Cochez](https://www.cochez.nl/)
 - [Vincent Francois-Lavet](http://vincent.francois-l.be/)
-
-## License
-
-[MIT](https://choosealicense.com/licenses/mit/)

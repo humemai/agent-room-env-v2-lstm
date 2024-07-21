@@ -62,7 +62,7 @@ class PPOExploreAgent(PPOAgent):
         mm_policy: str = "neural",
         mm_agent_path: (
             str | None
-        ) = "trained-agents/PPO/mm/2024-03-03 03:18:10.587529/agent.pkl",
+        ) = "trained-results/PPO/mm/2024-03-03 03:18:10.587529/agent.pkl",
         qa_function: str = "episodic_semantic",
         env_config: dict = {
             "question_prob": 1.0,
