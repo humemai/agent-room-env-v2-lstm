@@ -13,28 +13,17 @@ import gymnasium as gym
 import numpy as np
 import torch
 import torch.optim as optim
-from humemai.memory import EpisodicMemory, MemorySystems, SemanticMemory, ShortMemory
-from humemai.policy import (
-    answer_question,
-    argmax,
-    encode_observation,
-    explore,
-    manage_memory,
-)
+from humemai.memory import (EpisodicMemory, MemorySystems, SemanticMemory,
+                            ShortMemory)
+from humemai.policy import (answer_question, argmax, encode_observation,
+                            explore, manage_memory)
 from humemai.utils import is_running_notebook, write_yaml
 
 from .nn import LSTM, MLP
-from .utils import (
-    ReplayBuffer,
-    plot_results,
-    save_final_results,
-    save_states_q_values_actions,
-    save_validation,
-    select_action,
-    target_hard_update,
-    update_epsilon,
-    update_model,
-)
+from .utils import (ReplayBuffer, plot_results, save_final_results,
+                    save_states_q_values_actions, save_validation,
+                    select_action, target_hard_update, update_epsilon,
+                    update_model)
 
 
 class DQNAgent:

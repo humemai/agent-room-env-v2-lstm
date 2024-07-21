@@ -9,7 +9,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
-from humemai.utils import argmax, is_running_notebook, list_duplicates_of, write_yaml
+from humemai.utils import (argmax, is_running_notebook, list_duplicates_of,
+                           write_yaml)
 from IPython.display import clear_output
 from tqdm.auto import tqdm
 
