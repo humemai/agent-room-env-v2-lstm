@@ -19,6 +19,12 @@ This repo is to train an agent with an LSTM that interacts with the
 - [Jupyter Notebook for training](train-dqn.ipynb)
 - The training results are saved at [`./trained-results`](./trained-results/).
 
+## HumemAI Agent
+
+|                   DQN                    |            Memory Systems Example            |
+| :--------------------------------------: | :------------------------------------------: |
+| ![](./figures/humemai-lstm-q-values.png) | ![](./figures/memory-systems-example-xl.png) |
+
 ## Training Results
 
 | Capacity | Agent Type      | Phase 1   | Phase 2       |
@@ -40,10 +46,6 @@ This repo is to train an agent with an LSTM that interacts with the
 
 Also check out [`./trained-agents/`](./trained-agents) to see the saved training
 results.
-
-## An example of HumemAI agent's memory
-
-![](./figures/memory-systems-example-xl.png)
 
 ## pdoc documentation
 
