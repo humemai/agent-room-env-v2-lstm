@@ -378,8 +378,8 @@ def compute_loss(
         memory_types: memory_types
         samples: A dictionary of samples from the replay buffer.
             obs: np.ndarray,
-            act: np.ndarray,
-            rew: float,
+            acts: np.ndarray,
+            rews: float,
             next_obs: np.ndarray,
             done: bool,
         device: cpu or cuda

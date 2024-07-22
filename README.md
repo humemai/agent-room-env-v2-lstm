@@ -21,9 +21,9 @@ This repo is to train an agent with an LSTM that interacts with the
 
 ## HumemAI Agent
 
-|       The three functions of interest        |
-| :------------------------------------------: |
-| ![](./figures/humemai-architecture-lstm.png) |
+| A visualization of the four steps involved in training. |
+| :-----------------------------------------------------: |
+|              ![](./figures/lstm-steps.png)              |
 
 |                   DQN                    |
 | :--------------------------------------: |
