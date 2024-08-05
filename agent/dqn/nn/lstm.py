@@ -26,13 +26,14 @@ class LSTM(nn.Module):
         max_timesteps: maximum number of timesteps.
         max_strength: maximum strength.
         word2idx: dictionary that maps words to indices.
-        embeddings: learnable embeddings.
+        embeddings: learnable embeddings or one-hot vectors.
         short_term_scale: learnable scaling factor for short-term memory.
         episodic_scale: learnable scaling factor for episodic memory.
         semantic_scale: learnable scaling factor for semantic memory.
         short_term_weight: learnable weight for short-term memory.
         episodic_weight: learnable weight for episodic memory.
         semantic_weight: learnable weight for semantic memory.
+        use_one_hot: whether to use one-hot encoding instead of embeddings.
 
     """
 
@@ -49,6 +50,7 @@ class LSTM(nn.Module):
         max_timesteps: int | None = None,
         max_strength: int | None = None,
         relu_for_attention: bool = True,
+        use_one_hot: bool = False,
     ) -> None:
         """Initialize the LSTM.
 
@@ -67,6 +69,7 @@ class LSTM(nn.Module):
             max_strength: maximum strength.
             relu_for_attention: whether to apply non-linearity to the value
                 matrix
+            use_one_hot: whether to use one-hot encoding instead of embeddings
 
         """
         super().__init__()
@@ -80,10 +83,11 @@ class LSTM(nn.Module):
         self.num_layers = num_layers
         self.max_fourth_val = max(max_timesteps, max_strength)
         self.relu_for_attention = relu_for_attention
+        self.use_one_hot = use_one_hot
 
         self.create_embeddings()
         self.lstm = nn.LSTM(
-            self.embedding_dim,
+            self.embedding_dim if not use_one_hot else len(self.word2idx),
             self.hidden_size,
             self.num_layers,
             batch_first=True,
@@ -126,12 +130,27 @@ class LSTM(nn.Module):
 
         self.word2idx = {word: idx for idx, word in enumerate(self.word2idx)}
 
-        self.embeddings = nn.Embedding(
-            len(self.word2idx),
-            self.embedding_dim,
-            device=self.device,
-            padding_idx=0,
-        )
+        if not self.use_one_hot:
+            self.embeddings = nn.Embedding(
+                len(self.word2idx),
+                self.embedding_dim,
+                device=self.device,
+                padding_idx=0,
+            )
+
+    def get_one_hot(self, idx: int, length: int) -> torch.Tensor:
+        """Get one-hot encoding for a given index.
+
+        Args:
+            idx: index of the word
+            length: length of the one-hot vector
+
+        Returns:
+            one-hot encoding of the given index.
+        """
+        one_hot = torch.zeros(length, device=self.device)
+        one_hot[idx] = 1.0
+        return one_hot
 
     def make_embedding(
         self, mem: list[str], memory_type: Literal["short", "episodic", "semantic"]
@@ -147,39 +166,65 @@ class LSTM(nn.Module):
 
         """
         if mem == ["<PAD>", "<PAD>", "<PAD>", "<PAD>"]:
+            if self.use_one_hot:
+                return self.get_one_hot(self.word2idx["<PAD>"], len(self.word2idx))
             return self.embeddings(
                 torch.tensor(self.word2idx["<PAD>"], device=self.device)
             )
 
-        head_embedding = self.embeddings(
-            torch.tensor(self.word2idx[mem[0]], device=self.device)
+        head_embedding = (
+            self.get_one_hot(self.word2idx[mem[0]], len(self.word2idx))
+            if self.use_one_hot
+            else self.embeddings(
+                torch.tensor(self.word2idx[mem[0]], device=self.device)
+            )
         )
-        relation_embedding = self.embeddings(
-            torch.tensor(self.word2idx[mem[1]], device=self.device)
+        relation_embedding = (
+            self.get_one_hot(self.word2idx[mem[1]], len(self.word2idx))
+            if self.use_one_hot
+            else self.embeddings(
+                torch.tensor(self.word2idx[mem[1]], device=self.device)
+            )
         )
-        tail_embedding = self.embeddings(
-            torch.tensor(self.word2idx[mem[2]], device=self.device)
+        tail_embedding = (
+            self.get_one_hot(self.word2idx[mem[2]], len(self.word2idx))
+            if self.use_one_hot
+            else self.embeddings(
+                torch.tensor(self.word2idx[mem[2]], device=self.device)
+            )
         )
         final_embedding = head_embedding + relation_embedding + tail_embedding
 
         num_normalized = mem[3] / self.max_fourth_val  # Normalize num to [0, 1]
         if memory_type == "short":
-            time_embedding = self.embeddings(
-                torch.tensor(self.word2idx["current_time"], device=self.device)
+            time_embedding = (
+                self.get_one_hot(self.word2idx["current_time"], len(self.word2idx))
+                if self.use_one_hot
+                else self.embeddings(
+                    torch.tensor(self.word2idx["current_time"], device=self.device)
+                )
             )
             final_embedding += time_embedding * num_normalized * self.short_term_scale
 
         elif memory_type == "episodic":
-            timestamp_embedding = self.embeddings(
-                torch.tensor(self.word2idx["timestamp"], device=self.device)
+            timestamp_embedding = (
+                self.get_one_hot(self.word2idx["timestamp"], len(self.word2idx))
+                if self.use_one_hot
+                else self.embeddings(
+                    torch.tensor(self.word2idx["timestamp"], device=self.device)
+                )
             )
             final_embedding += (
                 timestamp_embedding * num_normalized * self.episodic_scale
             )
 
         elif memory_type == "semantic":
-            strength_embedding = self.embeddings(
-                torch.tensor(self.word2idx["strength"], device=self.device)
+            strength_embedding = (
+                self.get_one_hot(self.word2idx["strength"], len(self.word2idx))
+                if self.use_one_hot
+                else self.embeddings(
+                    torch.tensor(self.word2idx["strength"], device=self.device)
+                )
             )
             final_embedding += strength_embedding * num_normalized * self.semantic_scale
 

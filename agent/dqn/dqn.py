@@ -71,6 +71,7 @@ class DQNAgent:
             "max_timesteps": 100,
             "max_strength": 100,
             "relu_for_attention": True,
+            "use_one_hot": False,
         },
         mlp_params: dict = {
             "hidden_size": 64,
