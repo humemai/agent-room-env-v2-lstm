@@ -6,14 +6,12 @@ from copy import deepcopy
 import gymnasium as gym
 import numpy as np
 import torch
-from humemai.policy import (answer_question, encode_observation, explore,
-                            manage_memory)
 from humemai.utils import read_pickle, read_yaml, write_yaml
 from tqdm.auto import tqdm
 
 from .ppo import PPOAgent
-from .utils import (save_states_actions_probs_values, select_action,
-                    update_model)
+from .utils import save_states_actions_probs_values, select_action, update_model
+from ..policy import answer_question, encode_observation, explore, manage_memory
 
 
 class PPOExploreAgent(PPOAgent):
@@ -72,7 +70,7 @@ class PPOExploreAgent(PPOAgent):
             "rewards": {"correct": 1, "wrong": 0, "partial": 0},
             "make_everything_static": False,
             "num_total_questions": 1000,
-            "question_interval": 1,
+            "question_interval": 5,
             "include_walls_in_observations": True,
         },
         default_root_dir: str = "./training-results/PPO/explore",

@@ -8,11 +8,9 @@ from typing import Literal
 
 import gymnasium as gym
 import numpy as np
-from humemai.memory import (EpisodicMemory, MemorySystems, SemanticMemory,
-                            ShortMemory)
-from humemai.policy import (answer_question, encode_observation, explore,
-                            manage_memory)
+from humemai.memory import EpisodicMemory, MemorySystems, SemanticMemory, ShortMemory
 from humemai.utils import write_yaml
+from .policy import answer_question, encode_observation, explore, manage_memory
 
 
 class HandcraftedAgent:
@@ -34,11 +32,11 @@ class HandcraftedAgent:
             "make_everything_static": False,
             "rewards": {"correct": 1, "wrong": 0, "partial": 0},
             "num_total_questions": 100,
-            "question_interval": 1,
+            "question_interval": 5,
             "room_size": "xxs",
         },
         mm_policy: Literal[
-            "random", "episodic", "semantic", "generalize"
+            "random", "episodic", "semantic", "generalize", "handcrafted"
         ] = "generalize",
         qa_function: Literal[
             "episodic_semantic", "episodic", "semantic", "random"
@@ -60,7 +58,7 @@ class HandcraftedAgent:
             env_str: This has to be "room_env:RoomEnv-v2"
             env_config: The configuration of the environment.
             mm_policy: memory management policy. Choose one of "random", "episodic",
-                "semantic", or "generalize"
+                "semantic", "generalize", or "handcrafted"
             qa_function: The question answering policy. Choose one of
                 "episodic_semantic", "episodic", "semantic", or "random"
             explore_policy: The room exploration policy. Choose one of "random",
@@ -83,6 +81,7 @@ class HandcraftedAgent:
             "episodic",
             "semantic",
             "generalize",
+            "handcrafted",
         ]
         self.qa_function = qa_function
         assert self.qa_function in [

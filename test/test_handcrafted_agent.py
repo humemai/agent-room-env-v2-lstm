@@ -33,11 +33,11 @@ class HandcraftedAgentTest(unittest.TestCase):
                 "make_everything_static": False,
                 "rewards": {"correct": 1, "wrong": -1, "partial": 0},
                 "num_total_questions": 100,
-                "question_interval": 1,
+                "question_interval": 5,
             }
 
             results = {}
-            for mm_policy in ["random", "generalize"]:
+            for mm_policy in ["random", "generalize", "handcrafted"]:
                 for qa_function in ["random", "episodic_semantic"]:
                     for explore_policy in ["random", "avoid_walls"]:
                         for pretrain_semantic in [False, "include_walls"]:

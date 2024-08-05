@@ -49,6 +49,7 @@ class LSTM(nn.Module):
         max_timesteps: int | None = None,
         max_strength: int | None = None,
         relu_for_attention: bool = True,
+        concat_embeddings: bool = False,
     ) -> None:
         """Initialize the LSTM.
 
@@ -67,6 +68,7 @@ class LSTM(nn.Module):
             max_strength: maximum strength.
             relu_for_attention: whether to apply non-linearity to the value
                 matrix
+            concat_embeddings: whether to concatenate embeddings instead of
 
         """
         super().__init__()
@@ -80,6 +82,7 @@ class LSTM(nn.Module):
         self.num_layers = num_layers
         self.max_fourth_val = max(max_timesteps, max_strength)
         self.relu_for_attention = relu_for_attention
+        self.concat_embeddings = concat_embeddings
 
         self.create_embeddings()
         self.lstm = nn.LSTM(
@@ -91,10 +94,10 @@ class LSTM(nn.Module):
             device=self.device,
         )
 
-        # Learnable scaling factors
-        self.short_term_scale = nn.Parameter(torch.tensor(1.0))
-        self.episodic_scale = nn.Parameter(torch.tensor(1.0))
-        self.semantic_scale = nn.Parameter(torch.tensor(1.0))
+        # # Learnable scaling factors
+        # self.short_term_scale = nn.Parameter(torch.tensor(1.0))
+        # self.episodic_scale = nn.Parameter(torch.tensor(1.0))
+        # self.semantic_scale = nn.Parameter(torch.tensor(1.0))
 
         # Define linear layers for query, key, and value matrices
         input_dim_attention = (
@@ -103,6 +106,9 @@ class LSTM(nn.Module):
         self.query_net = nn.Linear(input_dim_attention, self.hidden_size)
         self.key_net = nn.Linear(input_dim_attention, self.hidden_size)
         self.value_net = nn.Linear(input_dim_attention, self.hidden_size)
+
+        if self.concat_embeddings:
+            self.projection = nn.Linear(self.embedding_dim * 4, self.embedding_dim)
 
     def create_embeddings(self) -> None:
         """Create learnable embeddings."""
@@ -147,9 +153,21 @@ class LSTM(nn.Module):
 
         """
         if mem == ["<PAD>", "<PAD>", "<PAD>", "<PAD>"]:
-            return self.embeddings(
-                torch.tensor(self.word2idx["<PAD>"], device=self.device)
-            )
+
+            if self.concat_embeddings:
+                return torch.cat(
+                    [
+                        self.embeddings(
+                            torch.tensor(self.word2idx["<PAD>"], device=self.device)
+                        )
+                        for _ in range(4)
+                    ],
+                    dim=-1,
+                )
+            else:
+                return self.embeddings(
+                    torch.tensor(self.word2idx["<PAD>"], device=self.device)
+                )
 
         head_embedding = self.embeddings(
             torch.tensor(self.word2idx[mem[0]], device=self.device)
@@ -160,33 +178,48 @@ class LSTM(nn.Module):
         tail_embedding = self.embeddings(
             torch.tensor(self.word2idx[mem[2]], device=self.device)
         )
-        final_embedding = head_embedding + relation_embedding + tail_embedding
 
         num_normalized = mem[3] / self.max_fourth_val  # Normalize num to [0, 1]
         if memory_type == "short":
-            time_embedding = self.embeddings(
-                torch.tensor(self.word2idx["current_time"], device=self.device)
+            qual_embedding = (
+                self.embeddings(
+                    torch.tensor(self.word2idx["current_time"], device=self.device)
+                )
+                * num_normalized
             )
-            final_embedding += time_embedding * num_normalized * self.short_term_scale
-
         elif memory_type == "episodic":
-            timestamp_embedding = self.embeddings(
-                torch.tensor(self.word2idx["timestamp"], device=self.device)
+            qual_embedding = (
+                self.embeddings(
+                    torch.tensor(self.word2idx["timestamp"], device=self.device)
+                )
+                * num_normalized
             )
-            final_embedding += (
-                timestamp_embedding * num_normalized * self.episodic_scale
-            )
-
         elif memory_type == "semantic":
-            strength_embedding = self.embeddings(
-                torch.tensor(self.word2idx["strength"], device=self.device)
+            qual_embedding = (
+                self.embeddings(
+                    torch.tensor(self.word2idx["strength"], device=self.device)
+                )
+                * num_normalized
             )
-            final_embedding += strength_embedding * num_normalized * self.semantic_scale
-
         else:
             raise ValueError(
                 f"memory_type should be either 'short', 'episodic', or 'semantic', "
                 f"but {memory_type} was given!"
+            )
+
+        if self.concat_embeddings:
+            final_embedding = torch.cat(
+                [
+                    head_embedding,
+                    relation_embedding,
+                    tail_embedding,
+                    qual_embedding,
+                ],
+                dim=-1,
+            )
+        else:
+            final_embedding = (
+                head_embedding + relation_embedding + tail_embedding + qual_embedding
             )
 
         return final_embedding
@@ -251,6 +284,10 @@ class LSTM(nn.Module):
         for memory_type in memory_types:
             batch = [sample[memory_type] for sample in x]
             batch = self.create_batch(batch, memory_type=memory_type)
+
+            if self.concat_embeddings:
+                batch = self.projection(batch)
+
             lstm_out, _ = self.lstm(batch)
             lstm_last_hidden_state = lstm_out[:, -1, :]  # (batch_size, hidden_size)
             hidden_states.append(lstm_last_hidden_state)

@@ -72,7 +72,7 @@ class PPOAgent(HandcraftedAgent):
             "rewards": {"correct": 1, "wrong": 0, "partial": 0},
             "make_everything_static": False,
             "num_total_questions": 1000,
-            "question_interval": 1,
+            "question_interval": 5,
             "include_walls_in_observations": True,
         },
         default_root_dir: str = "./training-results/PPO/",

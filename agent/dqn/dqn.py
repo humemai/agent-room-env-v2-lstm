@@ -14,13 +14,6 @@ import numpy as np
 import torch
 import torch.optim as optim
 from humemai.memory import EpisodicMemory, MemorySystems, SemanticMemory, ShortMemory
-from humemai.policy import (
-    answer_question,
-    argmax,
-    encode_observation,
-    explore,
-    manage_memory,
-)
 from humemai.utils import is_running_notebook, write_yaml
 
 from .nn import LSTM, MLP
@@ -34,6 +27,13 @@ from .utils import (
     target_hard_update,
     update_epsilon,
     update_model,
+)
+from ..policy import (
+    answer_question,
+    argmax,
+    encode_observation,
+    explore,
+    manage_memory,
 )
 
 
@@ -71,6 +71,7 @@ class DQNAgent:
             "max_timesteps": 100,
             "max_strength": 100,
             "relu_for_attention": True,
+            "concat_embeddings": False,
         },
         mlp_params: dict = {
             "hidden_size": 64,
@@ -95,7 +96,7 @@ class DQNAgent:
             "rewards": {"correct": 1, "wrong": 0, "partial": 0},
             "make_everything_static": False,
             "num_total_questions": 1000,
-            "question_interval": 1,
+            "question_interval": 5,
             "include_walls_in_observations": True,
         },
         ddqn: bool = True,
@@ -499,7 +500,11 @@ class DQNAgent:
                 )
                 remaining = self.process_first_observation(observations["room"])
                 next_state = self.get_deepcopied_memory_state()
-                self.replay_buffer.store(*[state, action, reward, next_state, done])
+                scaled_reward = reward / self.env.unwrapped.num_questions_step
+                assert scaled_reward <= 1
+                self.replay_buffer.store(
+                    *[state, action, scaled_reward, next_state, done]
+                )
 
             if done:
                 new_episode_starts = True
@@ -508,12 +513,11 @@ class DQNAgent:
                 states_, actions_, q_values_ = self.process_remaining_observations(
                     remaining, greedy=False
                 )
-                reward = 0
                 done = False
                 for state, next_state, action in zip(
                     states_[:-1], states_[1:], actions_
                 ):
-                    self.replay_buffer.store(*[state, action, reward, next_state, done])
+                    self.replay_buffer.store(*[state, action, 0, next_state, done])
 
     def train_mm(self) -> None:
         """Train the memory management policy."""
@@ -548,7 +552,11 @@ class DQNAgent:
                 )
                 remaining = self.process_first_observation(observations["room"])
                 next_state = self.get_deepcopied_memory_state()
-                self.replay_buffer.store(*[state, action, reward, next_state, done])
+                scaled_reward = reward / self.env.unwrapped.num_questions_step
+                assert scaled_reward <= 1
+                self.replay_buffer.store(
+                    *[state, action, scaled_reward, next_state, done]
+                )
                 self.q_values["mm"]["train"].append(q_values)
                 score += reward
                 self.iteration_idx += 1
@@ -578,11 +586,10 @@ class DQNAgent:
                 states_, actions_, q_values_ = self.process_remaining_observations(
                     remaining, greedy=False
                 )
-                reward = 0
                 for state, next_state, action in zip(
                     states_[:-1], states_[1:], actions_
                 ):
-                    self.replay_buffer.store(*[state, action, reward, next_state, done])
+                    self.replay_buffer.store(*[state, action, 0, next_state, done])
                 self.q_values["mm"]["train"].extend(q_values_)
 
             if not new_episode_starts:
@@ -932,7 +939,11 @@ class DQNAgent:
                 )
                 self.process_room_observations(observations["room"])
                 next_state = self.get_deepcopied_memory_state()
-                self.replay_buffer.store(*[state, action, reward, next_state, done])
+                scaled_reward = reward / self.env.unwrapped.num_questions_step
+                assert scaled_reward <= 1
+                self.replay_buffer.store(
+                    *[state, action, scaled_reward, next_state, done]
+                )
 
             if done:
                 new_episode_starts = True
@@ -991,7 +1002,11 @@ class DQNAgent:
                 )
                 self.process_room_observations(observations["room"])
                 next_state = self.get_deepcopied_memory_state()
-                self.replay_buffer.store(*[state, action, reward, next_state, done])
+                scaled_reward = reward / self.env.unwrapped.num_questions_step
+                assert scaled_reward <= 1
+                self.replay_buffer.store(
+                    *[state, action, scaled_reward, next_state, done]
+                )
                 self.q_values["explore"]["train"].append(q_values)
                 score += reward
                 self.iteration_idx += 1

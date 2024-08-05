@@ -14,10 +14,17 @@ from humemai.utils import is_running_notebook, write_yaml
 from room_env.envs.room2 import RoomEnv2
 from torch import nn
 
-from .utils import (ReplayBuffer, plot_results, save_final_results,
-                    save_states_q_values_actions, save_validation,
-                    select_action, target_hard_update, update_epsilon,
-                    update_model)
+from .utils import (
+    ReplayBuffer,
+    plot_results,
+    save_final_results,
+    save_states_q_values_actions,
+    save_validation,
+    select_action,
+    target_hard_update,
+    update_epsilon,
+    update_model,
+)
 
 
 class LSTM(torch.nn.Module):
@@ -396,7 +403,7 @@ class DQNLSTMMLPBaselineAgent:
             "rewards": {"correct": 1, "wrong": 0, "partial": 0},
             "make_everything_static": False,
             "num_total_questions": 1000,
-            "question_interval": 1,
+            "question_interval": 5,
             "include_walls_in_observations": True,
         },
         default_root_dir: str = "./training-results/",
@@ -652,7 +659,11 @@ class DQNLSTMMLPBaselineAgent:
                 )
                 self.history.add_block(observations["room"])
                 next_state = deepcopy({"data": self.history.to_list()})
-                self.replay_buffer.store(*[state, action, reward, next_state, done])
+                scaled_reward = reward / self.env.unwrapped.num_questions_step
+                assert scaled_reward <= 1
+                self.replay_buffer.store(
+                    *[state, action, scaled_reward, next_state, done]
+                )
 
             if done:
                 new_episode_starts = True
@@ -695,7 +706,11 @@ class DQNLSTMMLPBaselineAgent:
                 )
                 self.history.add_block(observations["room"])
                 next_state = deepcopy({"data": self.history.to_list()})
-                self.replay_buffer.store(*[state, action, reward, next_state, done])
+                scaled_reward = reward / self.env.unwrapped.num_questions_step
+                assert scaled_reward <= 1
+                self.replay_buffer.store(
+                    *[state, action, scaled_reward, next_state, done]
+                )
                 self.q_values["train"].append(q_values)
                 score += reward
                 self.iteration_idx += 1
