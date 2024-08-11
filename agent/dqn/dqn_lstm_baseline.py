@@ -14,10 +14,17 @@ from humemai.utils import is_running_notebook, write_yaml
 from room_env.envs.room2 import RoomEnv2
 from torch import nn
 
-from .utils import (ReplayBuffer, plot_results, save_final_results,
-                    save_states_q_values_actions, save_validation,
-                    select_action, target_hard_update, update_epsilon,
-                    update_model)
+from .utils import (
+    ReplayBuffer,
+    plot_results,
+    save_final_results,
+    save_states_q_values_actions,
+    save_validation,
+    select_action,
+    target_hard_update,
+    update_epsilon,
+    update_model,
+)
 
 
 class LSTM(torch.nn.Module):
@@ -32,6 +39,7 @@ class LSTM(torch.nn.Module):
         hidden_size: int = 64,
         bidirectional: bool = False,
         device: str = "cpu",
+        use_one_hot: bool = False,
     ) -> None:
         """Initialize the LSTM.
 
@@ -43,6 +51,7 @@ class LSTM(torch.nn.Module):
             hidden_size: Hidden size of the LSTM.
             bidirectional: Whether the LSTM is bidirectional.
             device: Device to use.
+            use_one_hot: Whether to use one-hot encoding.
 
         """
         super().__init__()
@@ -53,10 +62,11 @@ class LSTM(torch.nn.Module):
         self.embedding_dim = embedding_dim
         self.bidirectional = bidirectional
         self.device = device
+        self.use_one_hot = use_one_hot
 
         self.create_embeddings()
         self.lstm = torch.nn.LSTM(
-            self.embedding_dim,
+            self.embedding_dim if not use_one_hot else len(self.word2idx),
             self.hidden_size,
             self.num_layers,
             batch_first=True,
@@ -81,12 +91,27 @@ class LSTM(torch.nn.Module):
             )
         self.word2idx = {word: idx for idx, word in enumerate(self.word2idx)}
 
-        self.embeddings = nn.Embedding(
-            len(self.word2idx),
-            self.embedding_dim,
-            device=self.device,
-            padding_idx=0,
-        )
+        if not self.use_one_hot:
+            self.embeddings = nn.Embedding(
+                len(self.word2idx),
+                self.embedding_dim,
+                device=self.device,
+                padding_idx=0,
+            )
+
+    def get_one_hot(self, idx: int, length: int) -> torch.Tensor:
+        """Get one-hot encoding for a given index.
+
+        Args:
+            idx: index of the word
+            length: length of the one-hot vector
+
+        Returns:
+            one-hot encoding of the given index.
+        """
+        one_hot = torch.zeros(length, device=self.device)
+        one_hot[idx] = 1.0
+        return one_hot
 
     def make_embedding(self, obs: list[str]) -> torch.Tensor:
         """Create one embedding vector with summation.
@@ -99,18 +124,32 @@ class LSTM(torch.nn.Module):
 
         """
         if obs == ["<PAD>", "<PAD>", "<PAD>", "<PAD>"]:
+            if self.use_one_hot:
+                return self.get_one_hot(self.word2idx["<PAD>"], len(self.word2idx))
             return self.embeddings(
                 torch.tensor(self.word2idx["<PAD>"], device=self.device)
             )
 
-        head_embedding = self.embeddings(
-            torch.tensor(self.word2idx[obs[0]], device=self.device)
+        head_embedding = (
+            self.get_one_hot(self.word2idx[obs[0]], len(self.word2idx))
+            if self.use_one_hot
+            else self.embeddings(
+                torch.tensor(self.word2idx[obs[0]], device=self.device)
+            )
         )
-        relation_embedding = self.embeddings(
-            torch.tensor(self.word2idx[obs[1]], device=self.device)
+        relation_embedding = (
+            self.get_one_hot(self.word2idx[obs[1]], len(self.word2idx))
+            if self.use_one_hot
+            else self.embeddings(
+                torch.tensor(self.word2idx[obs[1]], device=self.device)
+            )
         )
-        tail_embedding = self.embeddings(
-            torch.tensor(self.word2idx[obs[2]], device=self.device)
+        tail_embedding = (
+            self.get_one_hot(self.word2idx[obs[2]], len(self.word2idx))
+            if self.use_one_hot
+            else self.embeddings(
+                torch.tensor(self.word2idx[obs[2]], device=self.device)
+            )
         )
         final_embedding = head_embedding + relation_embedding + tail_embedding
 
@@ -816,7 +855,7 @@ class DQNLSTMMLPBaselineAgent:
         self.mlp.eval()
         scores_temp, states, q_values, actions = self.validate_test_middle("val")
 
-        num_episodes = self.iteration_idx // (self.env_config["terminates_at"] + 1)
+        num_episodes = self.iteration_idx // (self.env_config["terminates_at"] + 1) - 1
 
         save_validation(
             policy=None,

@@ -1,4 +1,4 @@
-env_str: room_env:RoomEnv-v2
+env_str: rooms_env:RoomsEnv
 num_iterations: 20000
 replay_buffer_size: 20000
 warm_start: 2000

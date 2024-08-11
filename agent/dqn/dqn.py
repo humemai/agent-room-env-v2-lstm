@@ -728,7 +728,7 @@ class DQNAgent:
 
         scores_temp, states, q_values, actions = middle_function("val")
 
-        num_episodes = self.iteration_idx // (self.env_config["terminates_at"] + 1)
+        num_episodes = self.iteration_idx // (self.env_config["terminates_at"] + 1) - 1
 
         save_validation(
             policy=policy_type,

@@ -9,8 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
-from humemai.utils import (argmax, is_running_notebook, list_duplicates_of,
-                           write_yaml)
+from humemai.utils import argmax, is_running_notebook, list_duplicates_of, write_yaml
 from IPython.display import clear_output
 from tqdm.auto import tqdm
 
@@ -152,9 +151,10 @@ def plot_results(
         plt.legend(loc="upper left")
 
         plt.subplot(231)
-        plt.title("training td loss")
+        plt.title("training td loss (log scale)")
         plt.plot(training_loss)
         plt.xlabel("update counts")
+        plt.yscale("log")
 
         plt.subplot(232)
         plt.title("epsilons")
