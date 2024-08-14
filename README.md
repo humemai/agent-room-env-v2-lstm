@@ -1,7 +1,7 @@
 # Agent for RoomEnv-v2
 
 [![DOI](https://zenodo.org/badge/776465360.svg)](https://zenodo.org/doi/10.5281/zenodo.10876433)
-[![DOI](https://img.shields.io/badge/Paper-PDF-red.svg)]()
+[![DOI](https://img.shields.io/badge/Paper-PDF-red.svg)](https://arxiv.org/pdf/2408.05861)
 
 This repo is to train an agent with an LSTM that interacts with the
 [RoomEnv-v2](https://github.com/humemai/room-env).
@@ -52,8 +52,8 @@ This repo is to train an agent with an LSTM that interacts with the
 | 96       | Baseline        | N/A       | 155 (±77)     |
 | 192      | Baseline        | N/A       | 144 (±68)     |
 
-Also check out [`./trained-results/`](./trained-results) to see the saved training
-results.
+See [`./run-trained-models.ipynb`](./run-trained-models.ipynb) to run the trained
+models.
 
 ## pdoc documentation
 
@@ -76,7 +76,15 @@ inspire, and create. Any contributions you make are **greatly appreciated**.
 ## [Cite our paper]()
 
 ```bibtex
-
+@misc{kim2024leveragingknowledgegraphbasedhumanlike,
+      title={Leveraging Knowledge Graph-Based Human-Like Memory Systems to Solve Partially Observable Markov Decision Processes},
+      author={Taewoon Kim and Vincent François-Lavet and Michael Cochez},
+      year={2024},
+      eprint={2408.05861},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2408.05861},
+}
 ```
 
 ## Authors
