@@ -19,6 +19,16 @@ This repo is to train an agent with an LSTM that interacts with the
 - [Jupyter Notebook for training](train-dqn.ipynb)
 - The training results are saved at [`./trained-results`](./trained-results/).
 
+## RoomEnv-v2
+
+| An illustration of a hidden state $s_{t}$ (in white) and partial observation $o_{t}$ (in gray). |
+| :---------------------------------------------------------------------------------------------: |
+|                                ![](./figures/room-layout-xl.png)                                |
+
+| A hidden state $s_{t}$ (in white) and partial observation $o_{t}$ (in gray) represented as a KG. |
+| :----------------------------------------------------------------------------------------------: |
+|                               ![](./figures/room-layout-kg-xl.png)                               |
+
 ## HumemAI Agent
 
 | A visualization of the four steps involved in training. |
@@ -29,9 +39,9 @@ This repo is to train an agent with an LSTM that interacts with the
 | :--------------------------------------: |
 | ![](./figures/humemai-lstm-q-values.png) |
 
-|            Memory Systems Example            |
-| :------------------------------------------: |
-| ![](./figures/memory-systems-example-xl.png) |
+| The memory of the agent at the last time step. This is the most likely hidden state captured by the agent. |
+| :--------------------------------------------------------------------------------------------------------: |
+|                                ![](./figures/memory-systems-example-xl.png)                                |
 
 ## Training Results
 
