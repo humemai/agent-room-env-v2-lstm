@@ -476,7 +476,7 @@ def plot_results(
                 label="Test score",
             )
             plt.xlabel("episode num")
-        plt.legend(loc="upper left")
+        plt.legend(loc="best")
 
         plt.subplot(334)
         plt.title("Actor probs, train")
@@ -485,7 +485,7 @@ def plot_results(
                 [actor_prob[action_number] for actor_prob in actor_probs_all["train"]],
                 label=f"action {action_number}",
             )
-        plt.legend(loc="upper left")
+        plt.legend(loc="best")
         plt.xlabel("number of actions taken")
 
         plt.subplot(335)
@@ -495,7 +495,7 @@ def plot_results(
                 [actor_prob[action_number] for actor_prob in actor_probs_all["val"]],
                 label=f"action {action_number}",
             )
-        plt.legend(loc="upper left")
+        plt.legend(loc="best")
         plt.xlabel("number of actions taken")
 
         plt.subplot(336)
@@ -505,7 +505,7 @@ def plot_results(
                 [actor_prob[action_number] for actor_prob in actor_probs_all["test"]],
                 label=f"action {action_number}",
             )
-        plt.legend(loc="upper left")
+        plt.legend(loc="best")
         plt.xlabel("number of actions taken")
 
         plt.subplot(337)
@@ -577,7 +577,7 @@ def plot_results(
                 label="Test score",
             )
             plt.xlabel("episode num")
-        plt.legend(loc="upper left")
+        plt.legend(loc="best")
 
     elif to_plot == "actor_probs_train":
         plt.figure()
@@ -587,7 +587,7 @@ def plot_results(
                 [actor_prob[action_number] for actor_prob in actor_probs_all["train"]],
                 label=f"action {action_number}",
             )
-        plt.legend(loc="upper left")
+        plt.legend(loc="best")
         plt.xlabel("number of actions taken")
 
     elif to_plot == "actor_probs_val":
@@ -598,7 +598,7 @@ def plot_results(
                 [actor_prob[action_number] for actor_prob in actor_probs_all["val"]],
                 label=f"action {action_number}",
             )
-        plt.legend(loc="upper left")
+        plt.legend(loc="best")
         plt.xlabel("number of actions taken")
 
     elif to_plot == "actor_probs_test":
@@ -609,7 +609,7 @@ def plot_results(
                 [actor_prob[action_number] for actor_prob in actor_probs_all["test"]],
                 label=f"action {action_number}",
             )
-        plt.legend(loc="upper left")
+        plt.legend(loc="best")
         plt.xlabel("number of actions taken")
 
     elif to_plot == "critic_values_train":

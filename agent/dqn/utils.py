@@ -148,7 +148,7 @@ def plot_results(
                 label="Test score",
             )
             plt.xlabel("episode")
-        plt.legend(loc="upper left")
+        plt.legend(loc="best")
 
         plt.subplot(231)
         plt.title("training td loss (log scale)")
@@ -168,7 +168,7 @@ def plot_results(
                 [q_values_[action_number] for q_values_ in q_values["train"]],
                 label=f"action {action_number}",
             )
-        plt.legend(loc="upper left")
+        plt.legend(loc="best")
         plt.xlabel("number of actions taken")
 
         plt.subplot(235)
@@ -178,7 +178,7 @@ def plot_results(
                 [q_values_[action_number] for q_values_ in q_values["val"]],
                 label=f"action {action_number}",
             )
-        plt.legend(loc="upper left")
+        plt.legend(loc="best")
         plt.xlabel("number of actions taken")
 
         plt.subplot(236)
@@ -188,7 +188,7 @@ def plot_results(
                 [q_values_[action_number] for q_values_ in q_values["test"]],
                 label=f"action {action_number}",
             )
-        plt.legend(loc="upper left")
+        plt.legend(loc="best")
         plt.xlabel("number of actions taken")
 
         plt.subplots_adjust(hspace=0.5)
@@ -246,7 +246,7 @@ def plot_results(
                 label="Test score",
             )
             plt.xlabel("episode")
-        plt.legend(loc="upper left")
+        plt.legend(loc="best")
 
     elif to_plot == "q_values_train":
         plt.figure()
@@ -256,7 +256,7 @@ def plot_results(
                 [q_values_[action_number] for q_values_ in q_values["train"]],
                 label=f"action {action_number}",
             )
-        plt.legend(loc="upper left")
+        plt.legend(loc="best")
         plt.xlabel("number of actions taken")
 
     elif to_plot == "q_values_val":
@@ -267,7 +267,7 @@ def plot_results(
                 [q_values_[action_number] for q_values_ in q_values["val"]],
                 label=f"action {action_number}",
             )
-        plt.legend(loc="upper left")
+        plt.legend(loc="best")
         plt.xlabel("number of actions taken")
 
     elif to_plot == "q_values_test":
@@ -278,7 +278,7 @@ def plot_results(
                 [q_values_[action_number] for q_values_ in q_values["test"]],
                 label=f"action {action_number}",
             )
-        plt.legend(loc="upper left")
+        plt.legend(loc="best")
         plt.xlabel("number of actions taken")
     else:
         raise ValueError(f"to_plot={to_plot} is not valid.")
