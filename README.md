@@ -45,22 +45,22 @@ This repo is to train an agent with an LSTM that interacts with the
 
 ## Training Results
 
-| Capacity | Agent Type      | Phase 1   | Phase 2       |
-| -------- | --------------- | --------- | ------------- |
-| 12       | **HumemAI (E)** | 191 (±42) | **194** (±29) |
-|          | HumemAI         | 105 (±37) | 160 (±30)     |
-|          | Baseline        | N/A       | 144 (±14)     |
-|          | HumemAI (S)     | 111 (±43) | 124 (±65)     |
-| 24       | **HumemAI**     | 127 (±26) | **214** (±64) |
-|          | HumemAI (E)     | 227 (±21) | 209 (±30)     |
-|          | Baseline        | N/A       | 138 (±52)     |
-|          | HumemAI (S)     | 98 (±45)  | 112 (±79)     |
-| 48       | **HumemAI**     | 118 (±18) | **235** (±37) |
-|          | HumemAI (S)     | 192 (±13) | 226 (±97)     |
-|          | HumemAI (E)     | 201 (±42) | 225 (±25)     |
-|          | Baseline        | N/A       | 200 (±15)     |
-| 96       | Baseline        | N/A       | 155 (±77)     |
-| 192      | Baseline        | N/A       | 144 (±68)     |
+| Capacity | Agent Type      | Phase 1       | Phase 2       |
+| -------- | --------------- | ------------- | ------------- |
+| 12       | HumemAI         | 105 (±37)     | 160 (±30)     |
+|          | **HumemAI (E)** | **191 (±42)** | **194 (±29)** |
+|          | HumemAI (S)     | 111 (±43)     | 124 (±65)     |
+|          | Baseline        | N/A           | 144 (±14)     |
+| 24       | **HumemAI**     | **127 (±26)** | **214 (±64)** |
+|          | HumemAI (E)     | 227 (±21)     | 209 (±30)     |
+|          | HumemAI (S)     | 98 (±45)      | 112 (±79)     |
+|          | Baseline        | N/A           | 138 (±52)     |
+| 48       | **HumemAI**     | **118 (±18)** | **235 (±37)** |
+|          | HumemAI (E)     | 201 (±42)     | 225 (±25)     |
+|          | HumemAI (S)     | 192 (±13)     | 226 (±97)     |
+|          | Baseline        | N/A           | 200 (±15)     |
+| 96       | Baseline        | N/A           | 155 (±77)     |
+| 192      | Baseline        | N/A           | 144 (±68)     |
 
 See [`./run-trained-models.ipynb`](./run-trained-models.ipynb) to run the trained
 models.
