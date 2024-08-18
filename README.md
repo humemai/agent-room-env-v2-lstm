@@ -83,7 +83,7 @@ inspire, and create. Any contributions you make are **greatly appreciated**.
 1. Push to the Branch (`git push origin feature/AmazingFeature`)
 1. Open a Pull Request
 
-## [Cite our paper]()
+## [Cite our paper](https://arxiv.org/abs/2408.05861)
 
 ```bibtex
 @misc{kim2024leveragingknowledgegraphbasedhumanlike,
