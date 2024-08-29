@@ -55,5 +55,6 @@
   "dep_004": "Towel",
   "dep_005": "Tool",
   "dep_006": "Blanket",
-  "dep_007": "Bag"
+  "dep_007": "Bag",
+  "wall": "Wall"
 }
