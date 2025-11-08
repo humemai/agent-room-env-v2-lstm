@@ -2,7 +2,7 @@ import unittest
 from collections import Counter
 from copy import deepcopy
 
-from humemai.memory import LongMemory, MemorySystems, ShortMemory
+from humemai_research.memory import LongMemory, MemorySystems, ShortMemory
 
 from agent.policy import (answer_question, encode_all_observations,
                           encode_observation, explore, find_agent_location,

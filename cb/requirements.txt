@@ -1,4 +1,4 @@
-humemai==1.1.2
+humemai-research==1.1.2
 room-env==2.1.0
 numpy==1.26.4
 torch==2.1.1

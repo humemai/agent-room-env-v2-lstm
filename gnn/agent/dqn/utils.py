@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
-from humemai.utils import (
+from humemai_research.utils import (
     argmax,
     is_running_notebook,
     list_duplicates_of,

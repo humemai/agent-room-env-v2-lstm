@@ -8,8 +8,8 @@ from typing import Literal
 
 import gymnasium as gym
 import numpy as np
-from humemai.memory import LongMemory, MemorySystems, ShortMemory
-from humemai.utils import write_yaml
+from humemai_research.memory import LongMemory, MemorySystems, ShortMemory
+from humemai_research.utils import write_yaml
 
 from .policy import (answer_question, encode_all_observations, explore,
                      manage_memory)

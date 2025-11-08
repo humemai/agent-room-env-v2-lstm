@@ -6,7 +6,7 @@ The trained neural network policies are not implemented yet.
 import random
 from typing import Literal
 
-from humemai.memory import MemorySystems, ShortMemory
+from humemai_research.memory import MemorySystems, ShortMemory
 
 
 def encode_observation(memory_systems: MemorySystems, obs: list[str | int]) -> None:

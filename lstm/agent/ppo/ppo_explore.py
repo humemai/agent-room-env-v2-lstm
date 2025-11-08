@@ -6,9 +6,9 @@ from copy import deepcopy
 import gymnasium as gym
 import numpy as np
 import torch
-from humemai.policy import (answer_question, encode_observation, explore,
+from humemai_research.policy import (answer_question, encode_observation, explore,
                             manage_memory)
-from humemai.utils import read_pickle, read_yaml, write_yaml
+from humemai_research.utils import read_pickle, read_yaml, write_yaml
 from tqdm.auto import tqdm
 
 from .ppo import PPOAgent
@@ -91,7 +91,7 @@ class PPOExploreAgent(PPOAgent):
             lam: GAE lambda parameter
             epsilon: PPO clip parameter
             entropy_weight: entropy weight
-            capacity: The capacity of each human-like memory systems
+            capacity: The capacity of each Human-Like Memory
             pretrain_semantic: whether to pretrain the semantic memory system.
             nn_params: neural network parameters
             run_test: whether to run test

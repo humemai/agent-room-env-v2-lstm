@@ -8,11 +8,11 @@ from typing import Literal
 
 import gymnasium as gym
 import numpy as np
-from humemai.memory import (EpisodicMemory, MemorySystems, SemanticMemory,
+from humemai_research.memory import (EpisodicMemory, MemorySystems, SemanticMemory,
                             ShortMemory)
-from humemai.policy import (answer_question, encode_observation, explore,
+from humemai_research.policy import (answer_question, encode_observation, explore,
                             manage_memory)
-from humemai.utils import write_yaml
+from humemai_research.utils import write_yaml
 
 
 class HandcraftedAgent:
@@ -66,7 +66,7 @@ class HandcraftedAgent:
             explore_policy: The room exploration policy. Choose one of "random",
                 or "avoid_walls"
             num_samples_for_results: The number of samples to validate / test the agent.
-            capacity: The capacity of each human-like memory systems.
+            capacity: The capacity of each Human-Like Memory.
             pretrain_semantic: Whether or not to pretrain the semantic memory system.
             semantic_decay_factor: The decay factor for the semantic memory system.
             default_root_dir: default root directory to store the results.

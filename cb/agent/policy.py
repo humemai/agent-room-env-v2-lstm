@@ -9,7 +9,7 @@ from typing import Literal
 
 import numpy as np
 import torch
-from humemai.memory import MemorySystems, ShortMemory
+from humemai_research.memory import MemorySystems, ShortMemory
 
 
 def encode_observation(memory_systems: MemorySystems, obs: list[str | int]) -> None:

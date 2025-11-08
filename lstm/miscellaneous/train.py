@@ -7,7 +7,7 @@ import logging
 logger = logging.getLogger()
 logger.disabled = True
 
-from humemai.utils import read_yaml
+from humemai_research.utils import read_yaml
 
 from agent.dqn import DQNExploreAgent, DQNLSTMMLPBaselineAgent, DQNMMAgent
 

@@ -1,5 +1,5 @@
 numpy==1.26.4
 torch==2.1.1
 room-env==2.0.7
-humemai==1.0.4
+humemai-research==1.0.4
 gymnasium==0.29.1

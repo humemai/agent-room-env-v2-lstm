@@ -10,8 +10,8 @@ import gymnasium as gym
 import numpy as np
 import torch
 import torch.optim as optim
-from humemai.memory import LongMemory, MemorySystems, ShortMemory
-from humemai.utils import is_running_notebook, write_yaml
+from humemai_research.memory import LongMemory, MemorySystems, ShortMemory
+from humemai_research.utils import is_running_notebook, write_yaml
 
 from ..policy import (answer_question, encode_all_observations, explore,
                       manage_memory)

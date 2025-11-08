@@ -9,7 +9,7 @@ import gymnasium as gym
 import numpy as np
 import torch
 import torch.optim as optim
-from humemai.utils import is_running_notebook, write_yaml
+from humemai_research.utils import is_running_notebook, write_yaml
 from room_env.envs.room2 import RoomEnv2
 
 from ..handcrafted import HandcraftedAgent

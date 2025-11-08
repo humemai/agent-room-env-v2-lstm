@@ -10,8 +10,8 @@ import gymnasium as gym
 import numpy as np
 import torch
 import torch.optim as optim
-from humemai.memory import LongMemory, MemorySystems, ShortMemory
-from humemai.utils import is_running_notebook, read_yaml, write_yaml
+from humemai_research.memory import LongMemory, MemorySystems, ShortMemory
+from humemai_research.utils import is_running_notebook, read_yaml, write_yaml
 
 from ..policy import (
     answer_question,
@@ -107,7 +107,7 @@ class DQNAgent:
             max_epsilon: maximum epsilon
             min_epsilon: minimum epsilon
             learning_rate: learning rate for the optimizer
-            capacity: The capacity of each human-like memory systems
+            capacity: The capacity of each Human-Like Memory
             semantic_decay_factor: decay factor for the semantic memory system
             dqn_params: parameters for the DQN
             num_samples_for_results: The number of samples to validate / test the agent.

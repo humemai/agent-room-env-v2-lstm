@@ -16,7 +16,7 @@ import random
 import subprocess
 from copy import deepcopy
 
-from humemai.utils import write_yaml
+from humemai_research.utils import write_yaml
 from tqdm.auto import tqdm
 
 # history_block_size = 6

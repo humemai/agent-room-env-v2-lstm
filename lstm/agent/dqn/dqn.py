@@ -13,11 +13,11 @@ import gymnasium as gym
 import numpy as np
 import torch
 import torch.optim as optim
-from humemai.memory import (EpisodicMemory, MemorySystems, SemanticMemory,
+from humemai_research.memory import (EpisodicMemory, MemorySystems, SemanticMemory,
                             ShortMemory)
-from humemai.policy import (answer_question, argmax, encode_observation,
+from humemai_research.policy import (answer_question, argmax, encode_observation,
                             explore, manage_memory)
-from humemai.utils import is_running_notebook, write_yaml
+from humemai_research.utils import is_running_notebook, write_yaml
 
 from .nn import LSTM, MLP
 from .utils import (ReplayBuffer, plot_results, save_final_results,
